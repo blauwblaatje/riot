@@ -1,7 +1,7 @@
 # kubectl apply -k deploy/k8s   (k3s: Traefik ingress, local-path storage)
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: rats
+namespace: riot
 resources:
   - namespace.yaml
   - pvc.yaml
@@ -9,6 +9,6 @@ resources:
   - service.yaml
   - ingress.yaml
 images:
-  - name: rats
-    newName: rats # e.g. ghcr.io/<you>/rats, or a local image imported with: k3s ctr images import rats.tar
+  - name: riot
+    newName: riot # e.g. ghcr.io/<you>/riot, or a local image imported with: k3s ctr images import riot.tar
     newTag: latest

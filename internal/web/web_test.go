@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"rats/internal/store"
+	"riot/internal/store"
 )
 
 func newSite(t *testing.T) *httptest.Server {
@@ -113,7 +113,7 @@ func TestPages(t *testing.T) {
 	resp, _ = http.Get(srv.URL + ns)
 	page, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	if !strings.Contains(string(page), "<title>Test · RATS</title>") {
+	if !strings.Contains(string(page), "<title>Test · RIOT</title>") {
 		t.Errorf("namespace page: %.300s", page)
 	}
 }

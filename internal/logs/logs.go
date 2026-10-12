@@ -1,4 +1,4 @@
-// Package logs writes RATS's logs: everything to <dir>/rats.log (and
+// Package logs writes RIOT's logs: everything to <dir>/riot.log (and
 // standard error), and what concerns one namespace also to
 // <dir>/<id>.log, so a problem with one namespace can be read on its own.
 package logs
@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-// MaxMain is the size at which rats.log is moved to rats.log.1 and started
+// MaxMain is the size at which riot.log is moved to riot.log.1 and started
 // again.
 const MaxMain = 10 << 20
 
@@ -53,7 +53,7 @@ func (l *Logs) Printf(id, format string, args ...any) {
 	if l.dir == "" {
 		return
 	}
-	main := filepath.Join(l.dir, "rats.log")
+	main := filepath.Join(l.dir, "riot.log")
 	if st, err := os.Stat(main); err == nil && st.Size() > MaxMain {
 		os.Rename(main, main+".1")
 	}

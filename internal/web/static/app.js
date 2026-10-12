@@ -46,10 +46,10 @@ async function loadNS() {
 
 function remember() {
   try {
-    let list = JSON.parse(localStorage.getItem("rats.recent") || "[]");
+    let list = JSON.parse(localStorage.getItem("riot.recent") || "[]");
     if (!Array.isArray(list)) list = [];
     list = [{ id: NS, name: N.name }, ...list.filter((r) => r.id !== NS)].slice(0, 20);
-    localStorage.setItem("rats.recent", JSON.stringify(list));
+    localStorage.setItem("riot.recent", JSON.stringify(list));
   } catch (e) { /* private window */ }
 }
 
@@ -515,7 +515,7 @@ function filesTab() {
         <label>from tournament <input type="text" id="upTour" list="tlist" placeholder="as each file says"></label>
         <button class="primary" id="uploadBtn">Upload</button></div>
       <p class="small muted">Leave the tournament empty to use the name in each game (the IGRF's tournament). A data export with games from several
-        tournaments sorts itself out that way. Uploading a later save of a game is fine: RATS uses the scoreboard file with the most in it and the
+        tournaments sorts itself out that way. Uploading a later save of a game is fine: RIOT uses the scoreboard file with the most in it and the
         statsbook uploaded last.</p>
     </div>
     <datalist id="tlist">${tnames.map((n) => `<option value="${esc(n)}">`).join("")}</datalist>
@@ -628,8 +628,8 @@ document.addEventListener("click", async (e) => {
     if (!confirm(`Delete "${N.name}" and all ${N.files.length} files in it? This can't be undone.`)) return;
     await getJSON(api(""), { method: "DELETE" });
     try {
-      const list = JSON.parse(localStorage.getItem("rats.recent") || "[]").filter((r) => r.id !== NS);
-      localStorage.setItem("rats.recent", JSON.stringify(list));
+      const list = JSON.parse(localStorage.getItem("riot.recent") || "[]").filter((r) => r.id !== NS);
+      localStorage.setItem("riot.recent", JSON.stringify(list));
     } catch (err) { /* nothing */ }
     location.href = "/";
     return;
@@ -645,7 +645,7 @@ document.addEventListener("click", async (e) => {
     if (!name || !name.trim()) return;
     N = await getJSON(api(""), { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
     $("nsName").textContent = N.name;
-    document.title = N.name + " · RATS";
+    document.title = N.name + " · RIOT";
     remember();
   }
 });

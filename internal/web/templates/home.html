@@ -3,17 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RATS · Roller derby All-round Tournament Statistics</title>
+<title>RIOT · Roller derby Insights On Tournaments</title>
 <link rel="icon" href="/static/icon.svg">
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 <main class="narrow">
   <header class="brand">
-    <h1><abbr title="Roller derby All-round Tournament Statistics">RATS</abbr></h1>
-    <p class="tag"><b>R</b>oller derby <b>A</b>ll-round <b>T</b>ournament <b>S</b>tatistics</p>
+    <h1><abbr title="Roller derby Insights On Tournaments">RIOT</abbr></h1>
+    <p class="tag"><b>R</b>oller derby <b>I</b>nsights <b>O</b>n <b>T</b>ournaments</p>
   </header>
-  <p>Upload the CRG scoreboard's game files and the statsbooks of a tournament, or of a whole season. RATS gives you the
+  <p>Upload the CRG scoreboard's game files and the statsbooks of a tournament, or of a whole season. RIOT gives you the
     stats per tournament and over several together, compares the officiating crews, and shows what was corrected in
     the statsbooks after the game.</p>
   {{with .Error}}<p class="error" role="alert">{{.}}</p>{{end}}
@@ -42,7 +42,7 @@
     <p>A game in both is matched by tournament, date and game number (or its teams), and the two are compared.</p>
   </details>
 </main>
-<footer>RATS {{.Version}} · GPL-3 · reads the <a href="https://github.com/rollerderby/scoreboard">CRG scoreboard</a>'s files and WFTDA statsbooks</footer>
+<footer>RIOT {{.Version}} · GPL-3 · reads the <a href="https://github.com/rollerderby/scoreboard">CRG scoreboard</a>'s files and WFTDA statsbooks</footer>
 <script src="/static/home.js"></script>
 </body>
 </html>

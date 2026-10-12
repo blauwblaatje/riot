@@ -1,4 +1,4 @@
-// Package web is RATS's website: make a namespace, upload scoreboard game
+// Package web is RIOT's website: make a namespace, upload scoreboard game
 // files and statsbooks into it with the tournament they're from, and look
 // at the stats of one tournament or several together, the officiating
 // crews, and what the statsbooks corrected.
@@ -23,9 +23,9 @@ import (
 
 	"crgformat/stats"
 
-	"rats/internal/analysis"
-	"rats/internal/logs"
-	"rats/internal/store"
+	"riot/internal/analysis"
+	"riot/internal/logs"
+	"riot/internal/store"
 )
 
 //go:embed static templates
@@ -41,7 +41,7 @@ type Config struct {
 	Version string
 }
 
-// Site serves RATS.
+// Site serves RIOT.
 type Site struct {
 	cfg  Config
 	tmpl *template.Template

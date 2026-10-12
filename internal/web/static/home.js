@@ -3,7 +3,7 @@
 // localStorage by the namespace page).
 (function () {
   let list = [];
-  try { list = JSON.parse(localStorage.getItem("rats.recent") || "[]"); } catch (e) { list = []; }
+  try { list = JSON.parse(localStorage.getItem("riot.recent") || "[]"); } catch (e) { list = []; }
   if (!Array.isArray(list) || !list.length) return;
   const ul = document.getElementById("recentList");
   for (const r of list.slice(0, 12)) {

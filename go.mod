@@ -1,4 +1,4 @@
-module rats
+module riot
 
 go 1.25.0
 

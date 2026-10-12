@@ -1,16 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: rats
-  labels: {app: rats}
+  name: riot
+  labels: {app: riot}
 spec:
   replicas: 1 # namespaces are kept on one volume (ReadWriteOnce)
   strategy: {type: Recreate}
   selector:
-    matchLabels: {app: rats}
+    matchLabels: {app: riot}
   template:
     metadata:
-      labels: {app: rats}
+      labels: {app: riot}
     spec:
       securityContext:
         runAsNonRoot: true
@@ -19,15 +19,15 @@ spec:
         fsGroup: 65532
         seccompProfile: {type: RuntimeDefault}
       containers:
-        - name: rats
-          image: rats
+        - name: riot
+          image: riot
           imagePullPolicy: IfNotPresent
           ports:
             - {name: http, containerPort: 4201}
           env:
-            - {name: RATS_ADDR, value: ":4201"}
-            - {name: RATS_DATA, value: /data}
-            - {name: RATS_LOGS, value: /data/logs} # rats.log, and <id>.log per namespace
+            - {name: RIOT_ADDR, value: ":4201"}
+            - {name: RIOT_DATA, value: /data}
+            - {name: RIOT_LOGS, value: /data/logs} # riot.log, and <id>.log per namespace
           volumeMounts:
             - {name: data, mountPath: /data}
             - {name: tmp, mountPath: /tmp}
@@ -46,6 +46,6 @@ spec:
             capabilities: {drop: [ALL]}
       volumes:
         - name: data
-          persistentVolumeClaim: {claimName: rats-data}
+          persistentVolumeClaim: {claimName: riot-data}
         - name: tmp
           emptyDir: {}

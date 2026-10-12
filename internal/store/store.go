@@ -1,4 +1,4 @@
-// Package store keeps RATS's namespaces: a namespace is a set of uploaded
+// Package store keeps RIOT's namespaces: a namespace is a set of uploaded
 // files (Java scoreboard game files and statsbooks), each said to be from a
 // tournament, kept on disk so that it can be added to later.
 //

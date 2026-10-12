@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: rats-data
+  name: riot-data
 spec:
   accessModes: [ReadWriteOnce]
   resources:

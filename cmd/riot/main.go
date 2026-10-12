@@ -1,4 +1,4 @@
-// Command rats runs RATS, Roller derby All-round Tournament Statistics: a
+// Command riot runs RIOT, Roller derby Insights On Tournaments: a
 // website that takes CRG scoreboard game files and statsbooks, grouped in
 // namespaces by tournament, and shows tournament stats, officiating crews
 // and what the statsbooks corrected.
@@ -18,23 +18,23 @@ import (
 	"syscall"
 	"time"
 
-	"rats/internal/logs"
-	"rats/internal/store"
-	"rats/internal/web"
+	"riot/internal/logs"
+	"riot/internal/store"
+	"riot/internal/web"
 )
 
 // version is set by the build.
 var version = "dev"
 
 func main() {
-	addr := flag.String("addr", cmp.Or(os.Getenv("RATS_ADDR"), ":4201"), "address to listen on (RATS_ADDR)")
-	data := flag.String("data", cmp.Or(os.Getenv("RATS_DATA"), "data"), "folder to keep namespaces in (RATS_DATA)")
-	logDir := flag.String("logs", cmp.Or(os.Getenv("RATS_LOGS"), "logs"), "log folder: rats.log, and <id>.log per namespace (RATS_LOGS)")
+	addr := flag.String("addr", cmp.Or(os.Getenv("RIOT_ADDR"), ":4201"), "address to listen on (RIOT_ADDR)")
+	data := flag.String("data", cmp.Or(os.Getenv("RIOT_DATA"), "data"), "folder to keep namespaces in (RIOT_DATA)")
+	logDir := flag.String("logs", cmp.Or(os.Getenv("RIOT_LOGS"), "logs"), "log folder: riot.log, and <id>.log per namespace (RIOT_LOGS)")
 	showVersion := flag.Bool("version", false, "print the version and exit")
-	health := flag.Bool("health", false, "check that the rats on -addr answers, exit 0 if so (the container's health check)")
+	health := flag.Bool("health", false, "check that the riot on -addr answers, exit 0 if so (the container's health check)")
 	flag.Parse()
 	if *showVersion {
-		fmt.Println("rats", version)
+		fmt.Println("riot", version)
 		return
 	}
 	if *health {
@@ -80,7 +80,7 @@ func main() {
 		defer cancel()
 		srv.Shutdown(shut)
 	}()
-	lg.Printf("", "rats %s: listening on %s; %d namespaces in %q, logs in %q", version, *addr, st.Count(), *data, *logDir)
+	lg.Printf("", "riot %s: listening on %s; %d namespaces in %q, logs in %q", version, *addr, st.Count(), *data, *logDir)
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
 	}

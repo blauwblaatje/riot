@@ -1,6 +1,6 @@
-# RATS, Roller derby All-round Tournament Statistics.
+# RIOT, Roller derby Insights On Tournaments.
 #
-#   make            build bin/rats
+#   make            build bin/riot
 #   make run        run it on :4201, namespaces in data/, logs in logs/
 #   make test       vet and tests
 #   make vendor     refresh vendor/ from ../crg-format (after changing it there)
@@ -9,17 +9,17 @@
 #   make k3s-import load the image into a local k3s (no registry needed)
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
-IMAGE   ?= rats
+IMAGE   ?= riot
 LDFLAGS := -s -w -X main.version=$(VERSION)
 
 .PHONY: all run test vendor image image-multi k3s-import clean
 
 all:
 	@mkdir -p bin
-	CGO_ENABLED=0 go build -mod=vendor -trimpath -ldflags '$(LDFLAGS)' -o bin/rats ./cmd/rats
+	CGO_ENABLED=0 go build -mod=vendor -trimpath -ldflags '$(LDFLAGS)' -o bin/riot ./cmd/riot
 
 run: all
-	./bin/rats
+	./bin/riot
 
 test:
 	go vet -mod=vendor ./cmd/... ./internal/...

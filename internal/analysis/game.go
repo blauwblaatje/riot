@@ -7,7 +7,7 @@ import (
 	"crgformat/replay"
 )
 
-// Game is one game as RATS knows it: from a scoreboard file, a statsbook,
+// Game is one game as RIOT knows it: from a scoreboard file, a statsbook,
 // or both.
 type Game struct {
 	ID         string

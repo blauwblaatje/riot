@@ -1,4 +1,4 @@
-# RATS: Roller derby All-round Tournament Statistics
+# RIOT: Roller derby Insights On Tournaments
 
 A website for the stats of roller derby tournaments, from the files a
 tournament produces anyway: the **CRG scoreboard's game files** (Java,
@@ -27,7 +27,7 @@ league and roster, as in the scoreboard's tournament stats.
 A game is identified by tournament, date and game number, or, without a
 game number, by its teams (names, else skater numbers). A game can come
 from several files: data exports hold many copies of a game (prepared,
-half-way, finished), and statsbooks get saved more than once. RATS uses:
+half-way, finished), and statsbooks get saved more than once. RIOT uses:
 
 - the **scoreboard file with the most in it** (jams, trips, lineups,
   penalties);
@@ -38,7 +38,7 @@ half-way, finished), and statsbooks get saved more than once. RATS uses:
   where the corrections are.
 
 Prepared games and statsbooks filled in before the game (no jams) are
-listed with their file but left out. "Leave out" on the Files tab makes RATS
+listed with their file but left out. "Leave out" on the Files tab makes RIOT
 use another save of a game.
 
 ## Corrections
@@ -86,15 +86,15 @@ faded when the difference is less than about two standard deviations
 ## Running it
 
 ```sh
-make run            # bin/rats on :4201, namespaces in data/, logs in logs/
+make run            # bin/riot on :4201, namespaces in data/, logs in logs/
 make test           # needs ../old-games for the tests on real games (skipped without)
 ```
 
 | Flag | Environment | Default | |
 |---|---|---|---|
-| `-addr` | `RATS_ADDR` | `:4201` | where to listen |
-| `-data` | `RATS_DATA` | `data` | where namespaces are kept |
-| `-logs` | `RATS_LOGS` | `logs` | `rats.log`, and `<id>.log` per namespace |
+| `-addr` | `RIOT_ADDR` | `:4201` | where to listen |
+| `-data` | `RIOT_DATA` | `data` | where namespaces are kept |
+| `-logs` | `RIOT_LOGS` | `logs` | `riot.log`, and `<id>.log` per namespace |
 
 On disk, per namespace `data/ns/<id>/`: `namespace.json` (name, files, what
 was read from them), `files/` (the uploads as they were) and `read/` (the
@@ -102,7 +102,7 @@ games read from each file, gzipped, so a restart doesn't read every file
 again). A namespace in use is held in memory and dropped after 20 minutes
 unused; about 150 MB for the 104 test files (60 games).
 
-**Logs.** Everything to `logs/rats.log` (moved to `rats.log.1` at 10 MB) and
+**Logs.** Everything to `logs/riot.log` (moved to `riot.log.1` at 10 MB) and
 standard error; what concerns a namespace also to `logs/<id>.log`: uploads
 (file, size, tournament, games read, errors), failed requests with their
 answer, and errors the page ran into in the browser.
@@ -115,7 +115,7 @@ There is no login: the namespace's address is the key, as with RTFM.
 make image                         # docker build
 docker compose up -d               # http://localhost:4201
 make k3s-import                    # or push to a registry and set it in deploy/k8s/kustomization.yaml
-kubectl apply -k deploy/k8s        # namespace rats, 5 Gi volume, Traefik ingress (change the host)
+kubectl apply -k deploy/k8s        # namespace riot, 5 Gi volume, Traefik ingress (change the host)
 ```
 
 The image is distroless, runs as non-root with a read-only root file
@@ -126,7 +126,7 @@ and arm64.
 
 | | |
 |---|---|
-| `cmd/rats` | the server |
+| `cmd/riot` | the server |
 | `internal/store` | namespaces, uploads (json, xlsx, zip), grouping files into games |
 | `internal/analysis` | corrections (`compare.go`), crews (`crews.go`), timing (`timing.go`) |
 | `internal/web` | the site: one page per namespace (`static/app.js`), JSON API under `/n/<id>/api` |
