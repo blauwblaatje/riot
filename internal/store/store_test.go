@@ -8,7 +8,7 @@ import (
 
 	"crgformat/stats"
 
-	"rats/internal/analysis"
+	"riot/internal/analysis"
 )
 
 // loadOldGames uploads the test games in ../../../old-games (MRDWC 2026

@@ -1,4 +1,4 @@
-// Package analysis works out what RATS shows beyond the tournament stats of
+// Package analysis works out what RIOT shows beyond the tournament stats of
 // crgformat/stats: what a corrected statsbook changed compared with the
 // scoreboard's own game file (Compare), the officiating crews and their
 // penalty calls (Crews), and the stats that only a scoreboard file has,

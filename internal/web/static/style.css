@@ -1,4 +1,4 @@
-/* RATS: plain, readable, light and dark. Charts: one hue for amounts,
+/* RIOT: plain, readable, light and dark. Charts: one hue for amounts,
    blue/red with a grey middle for more or fewer than expected. */
 :root {
   --bg: #fcfcfb; --surface: #f2f1ee; --surface-2: #e9e8e4; --line: #dddcd7; --ink: #1d1d1b; --ink-2: #52514e; --muted: #75736c;

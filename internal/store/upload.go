@@ -17,7 +17,7 @@ import (
 	"crgformat/statsbook"
 )
 
-// MaxFile is the largest file RATS reads (a zip's files each count).
+// MaxFile is the largest file RIOT reads (a zip's files each count).
 const MaxFile = 64 << 20
 
 // Add reads an uploaded file and keeps it: a Java scoreboard file (one game
@@ -141,7 +141,7 @@ func (ns *Namespace) read(name, kind string, data []byte, tournament string, bat
 	case KindStatsbook:
 		r, err := statsbook.Import(data, name, ns.v)
 		if err != nil {
-			f.Error = "not a statsbook RATS can read: " + err.Error()
+			f.Error = "not a statsbook RIOT can read: " + err.Error()
 			break
 		}
 		e := &Entry{State: "Finished", Teams: [2]string{}}

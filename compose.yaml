@@ -1,13 +1,13 @@
 # docker compose up -d   then open http://localhost:4201
-# Namespaces and logs (rats.log, and <id>.log per namespace) are in the rats-data volume.
+# Namespaces and logs (riot.log, and <id>.log per namespace) are in the riot-data volume.
 services:
-  rats:
+  riot:
     build: .
-    image: rats:latest
+    image: riot:latest
     ports:
       - "4201:4201"
     volumes:
-      - rats-data:/data
+      - riot-data:/data
     restart: unless-stopped
 volumes:
-  rats-data:
+  riot-data:

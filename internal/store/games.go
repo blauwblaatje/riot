@@ -13,7 +13,7 @@ import (
 	"crgformat/derive"
 	"crgformat/replay"
 
-	"rats/internal/analysis"
+	"riot/internal/analysis"
 )
 
 // Games is the namespace's files grouped into games.
