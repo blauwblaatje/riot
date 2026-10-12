@@ -1,0 +1,6 @@
+.git
+data
+logs
+bin
+deploy
+*.md
