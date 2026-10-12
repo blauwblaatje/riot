@@ -1,0 +1,17 @@
+# k3s ships Traefik as its ingress controller. Change the host; for HTTPS add
+# a tls section (cert-manager, or Traefik's own certificate resolver).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rats
+spec:
+  rules:
+    - host: rats.example.org
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rats
+                port: {name: http}

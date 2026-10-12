@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RATS · Roller derby All-round Tournament Statistics</title>
+<link rel="icon" href="/static/icon.svg">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="narrow">
+  <header class="brand">
+    <h1><abbr title="Roller derby All-round Tournament Statistics">RATS</abbr></h1>
+    <p class="tag"><b>R</b>oller derby <b>A</b>ll-round <b>T</b>ournament <b>S</b>tatistics</p>
+  </header>
+  <p>Upload the CRG scoreboard's game files and the statsbooks of a tournament, or of a whole season. RATS gives you the
+    stats per tournament and over several together, compares the officiating crews, and shows what was corrected in
+    the statsbooks after the game.</p>
+  {{with .Error}}<p class="error" role="alert">{{.}}</p>{{end}}
+  <form method="post" action="/new">
+    <fieldset>
+      <legend>Start a namespace</legend>
+      <p class="small muted">A namespace holds the files you upload, grouped by tournament. Its address is the only key:
+        anyone with the link can see and change it, so keep the link to come back and add more.</p>
+      <label class="block">Name <input type="text" name="name" required maxlength="120" placeholder="2026 post-season"></label>
+      <button type="submit" class="primary">Make it</button>
+    </fieldset>
+  </form>
+  <section id="recent" hidden>
+    <h2>Namespaces you opened in this browser</h2>
+    <ul class="recent" id="recentList"></ul>
+  </section>
+  <details class="small">
+    <summary>What can I upload?</summary>
+    <ul>
+      <li><b>Scoreboard game files</b> (.json) from the Java CRG scoreboard: a single game, or a data export with many games.
+        Times only come from these: jam lengths, time to lead, lineups, timeouts.</li>
+      <li><b>Statsbooks</b> (.xlsx), WFTDA's template, as filled in after the game. Corrections live here, so the stats use the
+        statsbook when a game has one.</li>
+      <li>A <b>zip</b> of any of those.</li>
+    </ul>
+    <p>A game in both is matched by tournament, date and game number (or its teams), and the two are compared.</p>
+  </details>
+</main>
+<footer>RATS {{.Version}} · GPL-3 · reads the <a href="https://github.com/rollerderby/scoreboard">CRG scoreboard</a>'s files and WFTDA statsbooks</footer>
+<script src="/static/home.js"></script>
+</body>
+</html>
