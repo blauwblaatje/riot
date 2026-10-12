@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Name}} · RATS</title>
+<link rel="icon" href="/static/icon.svg">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body data-ns="{{.ID}}">
+<main>
+  <div class="top">
+    <a class="logo" href="/" title="Roller derby All-round Tournament Statistics">RATS</a>
+    <h1 id="nsName">{{.Name}}</h1>
+    <div class="actions">
+      <button class="quiet" id="copyLink" title="Anyone with this link can see and change the namespace">Copy link</button>
+      <button class="quiet" id="renameNS">Rename</button>
+    </div>
+  </div>
+  <div class="tours" id="tours" aria-label="Tournaments"></div>
+  <p class="scope small" id="scope"></p>
+  <nav class="tabs" id="tabs">
+    <button data-tab="overview">Overview</button>
+    <button data-tab="skaters">Skaters</button>
+    <button data-tab="teams">Teams</button>
+    <button data-tab="games">Games</button>
+    <button data-tab="timing">Timing <span class="json">scoreboard files</span></button>
+    <button data-tab="crews">Crews</button>
+    <button data-tab="fixes">Corrections</button>
+    <button data-tab="files">Files</button>
+  </nav>
+  <div id="main"><p class="muted">Loading…</p></div>
+</main>
+<div id="tip" role="tooltip"></div>
+<footer>RATS {{.Version}} · GPL-3</footer>
+<script src="/static/app.js"></script>
+</body>
+</html>

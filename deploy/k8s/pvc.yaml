@@ -1,0 +1,10 @@
+# The namespaces: uploaded files and what was read from them, and the logs.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rats-data
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 5Gi

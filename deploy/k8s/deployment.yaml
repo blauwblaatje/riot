@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rats
+  labels: {app: rats}
+spec:
+  replicas: 1 # namespaces are kept on one volume (ReadWriteOnce)
+  strategy: {type: Recreate}
+  selector:
+    matchLabels: {app: rats}
+  template:
+    metadata:
+      labels: {app: rats}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: rats
+          image: rats
+          imagePullPolicy: IfNotPresent
+          ports:
+            - {name: http, containerPort: 4201}
+          env:
+            - {name: RATS_ADDR, value: ":4201"}
+            - {name: RATS_DATA, value: /data}
+            - {name: RATS_LOGS, value: /data/logs} # rats.log, and <id>.log per namespace
+          volumeMounts:
+            - {name: data, mountPath: /data}
+            - {name: tmp, mountPath: /tmp}
+          readinessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 30
+          resources:
+            requests: {cpu: 50m, memory: 128Mi}
+            limits: {memory: 1Gi} # a namespace in use is held in memory
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+      volumes:
+        - name: data
+          persistentVolumeClaim: {claimName: rats-data}
+        - name: tmp
+          emptyDir: {}
