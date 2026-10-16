@@ -14,6 +14,8 @@ let picked = params.getAll("t");
 let day = params.get("date") || "";
 let tab = params.get("tab") || "";
 let crewKind = "referee";
+let gameId = params.get("game") || ""; // a game's own page, on the Games tab
+const gameCache = {};
 const filter = { team: "", minJams: null };
 const sorts = {};
 
@@ -283,6 +285,7 @@ const teamColumns = [
 ];
 
 function gamesTab() {
+  if (gameId) return gamePage();
   const label = (g) => `${esc(teamName(g.teams[0]))} ${g.score[0]} – ${g.score[1]} ${esc(teamName(g.teams[1]))}`;
   const gs = T().games;
   const ratio = (g) => per(Math.max(...g.score), Math.min(...g.score) || 1);
@@ -303,7 +306,7 @@ const gameColumns = [
   ["Date", (g) => g.date, (g) => esc(g.date), "l"], ["Game", (g) => +g.gameNo || 0, (g) => esc(g.gameNo || "")],
   ["Tournament", (g) => (S.gameInfo[g.id] || {}).tournament || "", (g) => esc((S.gameInfo[g.id] || {}).tournament || ""), "l"],
   ["Team", (g) => teamName(g.teams[0]), (g) => `<span class="${g.score[0] > g.score[1] ? "w" : ""}">${esc(teamName(g.teams[0]))}</span>`, "l"],
-  ["Score", (g) => g.score[0], (g) => `${g.score[0]} – ${g.score[1]}`],
+  ["Score", (g) => g.score[0], (g) => `<button class="link" data-game="${esc(g.id)}" title="the game's stats and score progression">${g.score[0]} – ${g.score[1]}</button>`],
   ["Team", (g) => teamName(g.teams[1]), (g) => `<span class="${g.score[1] > g.score[0] ? "w" : ""}">${esc(teamName(g.teams[1]))}</span>`, "l"],
   ["Margin", (g) => Math.abs(g.score[0] - g.score[1])], ["Periods", () => 0, (g) => g.periods.map((p) => `${p[0]}–${p[1]}`).join(", ")],
   ["Jams", (g) => g.jams], ["Lead changes/ties", (g) => g.leadChanges], ["Comeback", (g) => g.comeback],
@@ -311,6 +314,159 @@ const gameColumns = [
   ["From", (g) => (gameRow(g.id).statsbook ? 2 : 0) + (gameRow(g.id).scoreboard ? 1 : 0), (g) => sources(g.id), "l"],
   ["Corrections", (g) => gameRow(g.id).compared ? gameRow(g.id).changes : -1, (g) => gameRow(g.id).compared ? `<button class="link" data-changes="${g.id}">${gameRow(g.id).changes}</button>` : `<span class="muted">–</span>`],
 ];
+
+// --- one game: its stats and score progression -------------------------------------------
+
+function openGame(id) {
+  gameId = id;
+  tab = "games";
+  const u = new URL(location.href);
+  u.searchParams.set("tab", tab);
+  if (id) u.searchParams.set("game", id); else u.searchParams.delete("game");
+  history.replaceState(null, "", u);
+  render();
+  window.scrollTo(0, 0);
+}
+
+function gamePage() {
+  const G = gameCache[gameId];
+  if (!G) {
+    getJSON(api("/games/" + encodeURIComponent(gameId))).then((g) => { gameCache[gameId] = g; if (tab === "games") render(); })
+      .catch((e) => { $("main").innerHTML = `<p><button class="link" data-game="">← All games</button></p><p class="error">${esc(e.message)}</p>`; });
+    return `<p class="muted">Loading the game…</p>`;
+  }
+  const back = `<p><button class="link" data-game="">← All games</button></p>`;
+  if (!G.stats) return back + `<div class="callout">${esc(G.label)}: no jams played in its files.</div>`;
+  const st = G.stats, [A, B] = st.teams;
+  // The names as in the game list (the league's), for the charts too.
+  st.teams.forEach((t, i) => { t.name = G.teams[i] || t.name || `Team ${i + 1}`; });
+  const name = (i) => esc(st.teams[i].name);
+  const from = [G.statsbook ? "the statsbook" : "", G.scoreboard && !G.statsbook ? "the scoreboard file" : ""].filter(Boolean).join("");
+  const head = `<div class="gameHead">
+      <div class="side t1"><span class="name">${name(0)}</span><span class="score">${G.score[0]}</span></div>
+      <div class="dash">–</div>
+      <div class="side t2"><span class="score">${G.score[1]}</span><span class="name">${name(1)}</span></div>
+    </div>
+    <p class="note center">${[G.tournament, G.date && dayName(G.date), G.gameNo && `game ${esc(G.gameNo)}`].filter(Boolean).map(esc).join(" · ")}
+      · stats from ${from}${G.statsbook && G.scoreboard ? " (there's a scoreboard file too)" : ""}
+      ${G.compared ? G.changes.length ? ` · <button class="link" data-changes="${esc(G.id)}">${G.changes.length} ${G.changes.length === 1 ? "correction" : "corrections"}</button> in the statsbook` : " · no corrections in the statsbook" : ""}</p>`;
+  const periods = Math.max(A.periodPoints.length, B.periodPoints.length);
+  const lead = (t) => `${t.leadJams} <small>(${Math.round(pct(t.leadJams, t.jams))}%)</small>`;
+  const sp = (t) => t.jammers.reduce((n, j) => n + j.starPasses, 0);
+  const rows = [
+    ...Array.from({ length: periods }, (_, i) => [`Points, period ${i + 1}`, (t) => t.periodPoints[i] ?? ""]),
+    ["Points per jam", (t, i) => f2(per(G.score[i], t.jams))],
+    ["Lead jammer", lead], ["Star passes", sp],
+    ...Array.from({ length: periods }, (_, i) => [`Penalties, period ${i + 1}`, (t) => t.periodPenalties[i] ?? ""]),
+    ["Penalties", (t) => t.penalties],
+  ];
+  const compare = `<div class="scroll"><table class="t compare"><thead><tr><th class="l"></th><th class="t1c">${name(0)}</th><th class="t2c">${name(1)}</th></tr></thead>
+    <tbody>${rows.map(([l, f]) => `<tr><td class="l">${l}</td><td>${f(A, 0)}</td><td>${f(B, 1)}</td></tr>`).join("")}</tbody></table></div>`;
+  const codes = Object.keys({ ...G.codes[0], ...G.codes[1] }).sort((a, b) => (G.codes[1][b] || 0) + (G.codes[0][b] || 0) - (G.codes[1][a] || 0) - (G.codes[0][a] || 0));
+  const codeTable = codes.length ? `<div class="scroll"><table class="t compare"><thead><tr><th class="l">Code</th><th class="t1c">${name(0)}</th><th class="t2c">${name(1)}</th></tr></thead>
+    <tbody>${codes.map((c) => `<tr><td class="l">${esc(c)}</td><td>${G.codes[0][c] || ""}</td><td>${G.codes[1][c] || ""}</td></tr>`).join("")}</tbody></table></div>` : `<p class="muted">No penalties.</p>`;
+  return back + head +
+    section("Score progression", "the score after every jam; hover for the jam", `<div class="chart" id="scoreChart">${scoreChart(st.progress, st.teams)}</div>`) +
+    section("Points per jam", `${name(0)} up, ${name(1)} down; a dot marks the lead jammer's team`, `<div class="chart" id="jamChart">${jamChart(st.progress, st.teams)}</div>`) +
+    `<div class="grid">${section("The teams", "", compare)}${section("Penalties per code", "", codeTable)}</div>` +
+    [0, 1].map((i) => teamTables(st.teams[i], i, G)).join("");
+}
+
+// The chart's width follows the page, so its text stays readable.
+const chartWidth = () => Math.max(320, $("main").clientWidth || 800);
+const jamTip = (p, prev, teams) => {
+  const d = [p.score[0] - prev[0], p.score[1] - prev[1]];
+  const leadName = p.lead ? (teams.find((t) => t.team === p.lead) || {}).name : "";
+  return `Period ${p.period}, jam ${p.jam}\n${teams[0].name} ${p.score[0]} – ${p.score[1]} ${teams[1].name}\nthis jam ${d[0]}–${d[1]}${leadName ? `, lead ${leadName}` : ", no lead"}`;
+};
+function niceStep(max, lines) {
+  const raw = max / lines, mag = 10 ** Math.floor(Math.log10(raw || 1));
+  return [1, 2, 5, 10].map((m) => m * mag).find((x) => x >= raw) || raw;
+}
+// xs: where each jam is, with the period breaks; shared by both charts.
+function jamXs(progress, W, L, R) {
+  const n = progress.length;
+  const step = (W - L - R) / Math.max(n, 1);
+  return { step, x: (i) => L + step * (i + 0.5), edge: (i) => L + step * i };
+}
+function periodLines(progress, xs, top, bottom) {
+  let out = "";
+  progress.forEach((p, i) => {
+    if (i === 0 || p.period !== progress[i - 1].period) {
+      const x = xs.edge(i);
+      if (i > 0) out += `<line class="period" x1="${x}" x2="${x}" y1="${top}" y2="${bottom}"/>`;
+      out += `<text class="axis" x="${x + 4}" y="${top + 12}">Period ${p.period}</text>`;
+    }
+  });
+  return out;
+}
+function scoreChart(progress, teams) {
+  if (!progress.length) return `<p class="muted">No jams.</p>`;
+  const W = chartWidth(), H = 280, L = 40, R = 12, T = 8, B = 22;
+  const xs = jamXs(progress, W, L, R);
+  const max = Math.max(1, ...progress.map((p) => Math.max(...p.score)));
+  const stepY = niceStep(max, 5), top = Math.ceil(max / stepY) * stepY;
+  const y = (v) => T + (H - T - B) * (1 - v / top);
+  let grid = "";
+  for (let v = 0; v <= top; v += stepY) grid += `<line class="gridline" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="axis" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
+  const line = (k) => `<polyline class="line t${k + 1}" points="${L},${y(0)} ${progress.map((p, i) => `${xs.x(i)},${y(p.score[k])}`).join(" ")}"/>`;
+  const dots = (k) => progress.map((p, i) => `<circle class="dot t${k + 1}" cx="${xs.x(i)}" cy="${y(p.score[k])}" r="${p.lead === teams[k].team ? 3.2 : 1.8}"/>`).join("");
+  const hits = progress.map((p, i) => `<rect class="hit" x="${xs.edge(i)}" y="${T}" width="${xs.step}" height="${H - T - B}" data-tip="${esc(jamTip(p, i ? progress[i - 1].score : [0, 0], teams))}"/>`).join("");
+  const legend = teams.map((t, k) => `<span class="key t${k + 1}"></span>${esc(t.name)} <b>${progress[progress.length - 1].score[k]}</b>`).join(" &nbsp; ");
+  return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Score progression">${grid}
+    ${periodLines(progress, xs, T, H - B)}${line(0)}${line(1)}${dots(0)}${dots(1)}
+    <text class="axis" x="${W - R}" y="${H - 6}" text-anchor="end">${progress.length} jams</text>${hits}</svg><p class="legend">${legend}</p>`;
+}
+function jamChart(progress, teams) {
+  if (!progress.length) return "";
+  const W = chartWidth(), H = 170, L = 40, R = 12, T = 8, B = 8;
+  const xs = jamXs(progress, W, L, R);
+  const pts = progress.map((p, i) => { const prev = i ? progress[i - 1].score : [0, 0]; return [p.score[0] - prev[0], p.score[1] - prev[1]]; });
+  const max = Math.max(4, ...pts.flat());
+  const mid = (T + H - B) / 2, h = (v) => ((H - B - T) / 2) * (v / max);
+  const bw = Math.max(1, xs.step * 0.7);
+  const bars = pts.map(([a, b], i) => `${a ? `<rect class="bar t1" x="${xs.x(i) - bw / 2}" y="${mid - h(a)}" width="${bw}" height="${h(a)}"/>` : ""}${b ? `<rect class="bar t2" x="${xs.x(i) - bw / 2}" y="${mid}" width="${bw}" height="${h(b)}"/>` : ""}`).join("");
+  const leads = progress.map((p, i) => p.lead === teams[0].team ? `<circle class="dot t1" cx="${xs.x(i)}" cy="${mid - h(pts[i][0]) - 5}" r="2.2"/>` : p.lead === teams[1].team ? `<circle class="dot t2" cx="${xs.x(i)}" cy="${mid + h(pts[i][1]) + 5}" r="2.2"/>` : "").join("");
+  const hits = progress.map((p, i) => `<rect class="hit" x="${xs.edge(i)}" y="${T}" width="${xs.step}" height="${H - T - B}" data-tip="${esc(jamTip(p, i ? progress[i - 1].score : [0, 0], teams))}"/>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Points per jam">
+    ${periodLines(progress, xs, T, H - B)}<line class="gridline" x1="${L}" x2="${W - R}" y1="${mid}" y2="${mid}"/>
+    <text class="axis" x="${L - 6}" y="${mid - h(max) + 10}" text-anchor="end">${max}</text><text class="axis" x="${L - 6}" y="${mid + h(max)}" text-anchor="end">${max}</text>
+    ${bars}${leads}${hits}</svg>`;
+}
+window.addEventListener("resize", () => {
+  const G = tab === "games" && gameId && gameCache[gameId];
+  if (!G || !G.stats) return;
+  if ($("scoreChart")) $("scoreChart").innerHTML = scoreChart(G.stats.progress, G.stats.teams);
+  if ($("jamChart")) $("jamChart").innerHTML = jamChart(G.stats.progress, G.stats.teams);
+});
+
+// passers: the jammers who passed a pivot the star, most first ("#31 ×4").
+function passers(from) {
+  const n = {};
+  from.forEach((x) => { n[x] = (n[x] || 0) + 1; });
+  return Object.entries(n).sort((a, b) => b[1] - a[1]).map(([k, c]) => `#${esc(k)}${c > 1 ? ` ×${c}` : ""}`).join(", ");
+}
+
+// A team's skaters in the game: as jammer, as pivot after a star pass, as
+// blocker. Track time only where the jams have real lengths (a scoreboard
+// file, or a statsbook's game clock sheet).
+function teamTables(t, i, G) {
+  const timed = G.timed;
+  const num = (x) => +String(x.number).replace(/\D/g, "") || 0;
+  const sk = [["#", (x) => num(x), (x) => esc(x.number), "l"], ["Name", (x) => x.name || "", (x) => esc(x.name || ""), "l"]];
+  const time = timed ? [["Time", (x) => x.trackMs, (x) => clock(x.trackMs)]] : [];
+  const jam = [...sk, ["Jams", (x) => x.jams], ["Lead", (x) => x.lead, (x) => `${x.lead} <small>(${Math.round(pct(x.lead, x.jams))}%)</small>`],
+    ["Called off", (x) => x.calloffs], ["Points", (x) => x.for], ["Against", (x) => x.against], ["+/−", (x) => x.for - x.against, (x) => signed(x.for - x.against, 0)],
+    ["Pts/jam", (x) => per(x.for, x.jams), (x) => f2(per(x.for, x.jams))], ["SP", (x) => x.starPasses], ["Penalties", (x) => x.penalties], ...time];
+  const piv = [...sk, ["Star taken", (x) => x.received], ["Points after", (x) => x.for], ["From", (x) => x.from.length, (x) => passers(x.from), "l"], ["Penalties", (x) => x.penalties]];
+  const blk = [...sk, ["Jams", (x) => x.jams], ["As pivot", (x) => x.pivotJams], ["Penalties", (x) => x.penalties], ...time];
+  const by = (list, f) => [...list].sort((a, b) => f(b) - f(a));
+  return `<h2 class="teamHead t${i + 1}">${esc(t.name)}</h2>
+    ${section("Jammers", "", table(`gj${i}`, jam, by(t.jammers, (x) => x.jams)))}<div class="grid">
+    ${section("Blockers and pivots", "", table(`gb${i}`, blk, by(t.blockers, (x) => x.jams)))}
+    ${t.pivots.length ? section("Pivots who took the star", "", table(`gp${i}`, piv, by(t.pivots, (x) => x.received))) : ""}
+  </div>`;
+}
 
 // --- timing (scoreboard files only) ------------------------------------------------------
 
@@ -588,15 +744,19 @@ function wireDrop() {
 
 function setTab(t) {
   tab = t;
+  gameId = "";
   const u = new URL(location.href);
   u.searchParams.set("tab", tab);
+  u.searchParams.delete("game");
   history.replaceState(null, "", u);
   render();
 }
 
 document.addEventListener("click", async (e) => {
   const b = e.target.closest("#tabs button");
-  if (b) return setTab(b.dataset.tab);
+  if (b) { if (b.dataset.tab === "games" && gameId) return openGame(""); return setTab(b.dataset.tab); }
+  const gb = e.target.closest("button[data-game]");
+  if (gb) return openGame(gb.dataset.game);
   const go = e.target.closest("[data-goto]");
   if (go) return setTab(go.dataset.goto);
   const th = e.target.closest("th[data-col]");

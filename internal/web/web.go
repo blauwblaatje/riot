@@ -433,18 +433,55 @@ func (s *Site) removeFile(w http.ResponseWriter, r *http.Request, ns *store.Name
 	s.info(w, r, ns)
 }
 
-// game is one game's sources and what its statsbook changed.
+// GameResponse is one game: where it comes from, its stats, and what its
+// statsbook changed.
+type GameResponse struct {
+	ID         string             `json:"id"`
+	Label      string             `json:"label"`
+	Tournament string             `json:"tournament"`
+	Date       string             `json:"date,omitempty"`
+	GameNo     string             `json:"gameNo,omitempty"`
+	Teams      [2]string          `json:"teams"` // as in the game list: league names
+	Score      [2]int             `json:"score"`
+	Statsbook  bool               `json:"statsbook"`  // the stats are the statsbook's
+	Scoreboard bool               `json:"scoreboard"` // there is a scoreboard file
+	Stats      *stats.Game        `json:"stats"`      // nil for a game not played
+	Timed      bool               `json:"timed"`      // the jams have real lengths: a scoreboard file, or a statsbook with its game clock sheet filled in
+	Codes      [2]map[string]int  `json:"codes"`      // penalties per code, per team
+	Compared   bool               `json:"compared"`
+	Changes    []*analysis.Change `json:"changes"`
+}
+
+// game is one game's sources, stats and what its statsbook changed.
 func (s *Site) game(w http.ResponseWriter, r *http.Request, ns *store.Namespace) {
 	g := ns.Games().ByID[r.PathValue("gid")]
 	if g == nil {
 		http.Error(w, "no such game", http.StatusNotFound)
 		return
 	}
-	changes := g.Changes
-	if changes == nil {
-		changes = []*analysis.Change{}
+	v := GameResponse{ID: g.ID, Label: g.Label, Tournament: g.Tournament, Date: g.Date, GameNo: g.GameNo, Teams: g.Teams, Score: g.Score,
+		Statsbook: g.UsedStatsbook != nil, Scoreboard: g.Scoreboard != nil, Compared: g.Compared, Changes: g.Changes,
+		Codes: [2]map[string]int{{}, {}}}
+	if v.Changes == nil {
+		v.Changes = []*analysis.Change{}
 	}
-	writeJSON(w, map[string]any{"id": g.ID, "label": g.Label, "tournament": g.Tournament, "compared": g.Compared, "changes": changes})
+	if g.Stats != nil {
+		v.Stats = stats.Compute(g.Stats)
+		// A statsbook without its game clock sheet has every jam at 2:00.
+		for _, p := range g.Stats.Periods {
+			for _, j := range p.Jams {
+				v.Timed = v.Timed || j.Duration != nil && *j.Duration != 120000 && *j.Duration != 0
+			}
+		}
+		for _, p := range g.Stats.Penalties {
+			for i, t := range g.Stats.Teams {
+				if i < 2 && t.Team == p.Team && p.Code != "" {
+					v.Codes[i][p.Code]++
+				}
+			}
+		}
+	}
+	writeJSON(w, v)
 }
 
 // StatsResponse is the stats of the chosen tournaments' games.

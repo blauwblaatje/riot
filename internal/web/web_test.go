@@ -153,6 +153,28 @@ func TestUploadAndStats(t *testing.T) {
 	if len(detail["changes"].([]any)) == 0 {
 		t.Errorf("no changes in %v", detail)
 	}
+	// The game's own stats: the score after every jam ends at the final
+	// score, both teams with jammers, penalties per code adding up.
+	gs, _ := detail["stats"].(map[string]any)
+	if gs == nil || detail["statsbook"] != true || detail["scoreboard"] != true {
+		t.Fatalf("game stats: %v", detail["stats"] != nil)
+	}
+	prog := gs["progress"].([]any)
+	last := prog[len(prog)-1].(map[string]any)["score"].([]any)
+	score := detail["score"].([]any)
+	if len(prog) < 20 || last[0] != score[0] || last[1] != score[1] {
+		t.Errorf("progress: %d jams, last %v, score %v", len(prog), last, score)
+	}
+	for i, tm := range gs["teams"].([]any) {
+		tm := tm.(map[string]any)
+		n := 0.0
+		for _, c := range detail["codes"].([]any)[i].(map[string]any) {
+			n += c.(float64)
+		}
+		if len(tm["jammers"].([]any)) == 0 || n != tm["penalties"].(float64) {
+			t.Errorf("team %d: %d jammers, %v penalties by code, %v in all", i, len(tm["jammers"].([]any)), n, tm["penalties"])
+		}
+	}
 
 	// Put the statsbook in another tournament: now two games, none compared.
 	files := info["files"].([]any)

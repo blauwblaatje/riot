@@ -13,6 +13,7 @@ tournament produces anyway: the **CRG scoreboard's game files** (Java,
 | Tab | What | From |
 |---|---|---|
 | Overview, Skaters, Teams, Games | leaderboards (scorers, points per jam, lead %, +/−, star passes), team results, comebacks, lead changes, jam scores; as the CRG Go scoreboard's tournament stats (`crgformat/stats`) | the statsbook if the game has one, else the scoreboard file |
+| A game (click its score on the Games tab) | the score after every jam as a chart, points per jam per team with the lead jammer, points and penalties per period, penalties per code, and per team its jammers (jams, lead, call-offs, points, +/−, star passes, penalties), blockers and pivots, and the pivots who took the star; time on track when the jams have real lengths (a scoreboard file, or a statsbook with its game clock sheet filled in) | the statsbook if the game has one, else the scoreboard file |
 | Timing | jam lengths, time to lead, when lead jammers call it off, when penalties are called, lineup time, timeouts and their length, quickest jammers to lead, game length | **scoreboard files only**: a statsbook has no times, so games with only a statsbook are left out, and the tab says so |
 | Crews | referee and NSO crews, their penalties per game and per code, against what the same teams got from the other crews of the tournament; official reviews, official timeouts; for NSO crews the corrections in their statsbooks | both |
 | Corrections | what the statsbook shows differently from the scoreboard file, per area (score, lineups, box, penalties, roster, officials), the most common kinds ("box symbols `- SP:$` → `SP:+`", "penalty code B → F") and every game's list | games with both |
@@ -138,6 +139,7 @@ repository builds on its own; `make vendor` refreshes it.
 API, for scripts: `GET /n/<id>/api` (files, tournaments, games), `POST
 /n/<id>/api/files` (multipart: `tournament`, `files`…), `PATCH|DELETE
 /n/<id>/api/files/<fid>`, `GET /n/<id>/api/stats?t=<tournament>&t=…&date=`,
-`GET /n/<id>/api/games/<gid>` (a game's corrections).
+`GET /n/<id>/api/games/<gid>` (a game's stats, score after every jam, and
+corrections).
 
 GPL-3.
