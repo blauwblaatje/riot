@@ -3,20 +3,20 @@
 :root {
   --bg: #fcfcfb; --surface: #f2f1ee; --surface-2: #e9e8e4; --line: #dddcd7; --ink: #1d1d1b; --ink-2: #52514e; --muted: #75736c;
   --accent: #2a78d6; --accent-ink: #fff; --error: #b3261e; --ok: #1f7a3a;
-  --bar: #2a78d6; --bar-hover: #1c5cab; --neg: #e34948; --mid: #f0efec; --track: #ecebe7;
+  --bar: #2a78d6; --bar-hover: #1c5cab; --neg: #e34948; --mid: #f0efec; --track: #ecebe7; --team1: #2a78d6; --team2: #e07b1f;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #1a1a19; --surface: #232322; --surface-2: #2c2c2a; --line: #3a3a37; --ink: #ecebe8; --ink-2: #c3c2b7; --muted: #9a9890;
     --accent: #3987e5; --accent-ink: #fff; --error: #ef8a83; --ok: #6cc28a;
-    --bar: #3987e5; --bar-hover: #6da7ec; --neg: #e66767; --mid: #383835; --track: #2b2b29; color-scheme: dark;
+    --bar: #3987e5; --bar-hover: #6da7ec; --neg: #e66767; --mid: #383835; --track: #2b2b29; --team1: #4d94ea; --team2: #f0953f; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #1a1a19; --surface: #232322; --surface-2: #2c2c2a; --line: #3a3a37; --ink: #ecebe8; --ink-2: #c3c2b7; --muted: #9a9890;
   --accent: #3987e5; --accent-ink: #fff; --error: #ef8a83; --ok: #6cc28a;
-  --bar: #3987e5; --bar-hover: #6da7ec; --neg: #e66767; --mid: #383835; --track: #2b2b29; color-scheme: dark;
+  --bar: #3987e5; --bar-hover: #6da7ec; --neg: #e66767; --mid: #383835; --track: #2b2b29; --team1: #4d94ea; --team2: #f0953f; color-scheme: dark;
 }
 * { box-sizing: border-box; }
 html { overflow-x: hidden; }
@@ -144,3 +144,40 @@ details.changes > summary { cursor: pointer; }
   .tile .value { font-size: 1.4em; }
 }
 td details summary { white-space: nowrap; }
+
+/* One game: score progression, points per jam, the teams. */
+.gameHead { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 6px 0 2px; flex-wrap: wrap; }
+.gameHead .side { display: flex; align-items: baseline; gap: 10px; }
+.gameHead .name { font-size: 1.15em; font-weight: 600; }
+.gameHead .score { font-size: 2.2em; font-weight: 700; font-variant-numeric: tabular-nums; }
+.gameHead .t1 .score { color: var(--team1); }
+.gameHead .t2 .score { color: var(--team2); }
+.gameHead .dash { font-size: 1.6em; color: var(--muted); }
+.center { text-align: center; }
+.chart { overflow-x: auto; }
+.chart svg { display: block; max-width: none; }
+.chart .gridline { stroke: var(--line); stroke-width: 1; }
+.chart .period { stroke: var(--muted); stroke-dasharray: 4 4; }
+.chart .axis { fill: var(--muted); font-size: 11px; }
+.chart .line { fill: none; stroke-width: 2.2; stroke-linejoin: round; }
+.chart .line.t1, .chart .bar.t1 { stroke: var(--team1); }
+.chart .line.t2, .chart .bar.t2 { stroke: var(--team2); }
+.chart .bar.t1, .chart .dot.t1 { fill: var(--team1); stroke: none; }
+.chart .bar.t2, .chart .dot.t2 { fill: var(--team2); stroke: none; }
+.chart .hit { fill: transparent; }
+.chart .hit:hover { fill: var(--ink); fill-opacity: 0.06; }
+.legend { font-size: 0.9em; margin: 4px 0 0; }
+.legend .key { display: inline-block; width: 14px; height: 3px; vertical-align: middle; margin-right: 5px; border-radius: 2px; }
+.legend .key.t1, .teamHead.t1::before { background: var(--team1); }
+.legend .key.t2, .teamHead.t2::before { background: var(--team2); }
+table.compare th.t1c { color: var(--team1); }
+table.compare th.t2c { color: var(--team2); }
+.teamHead { margin-top: 26px; }
+.teamHead::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 8px; }
+@media (max-width: 600px) {
+  .gameHead { flex-direction: column; align-items: stretch; gap: 0; }
+  .gameHead .side { justify-content: space-between; }
+  .gameHead .side.t2 { flex-direction: row-reverse; }
+  .gameHead .dash { display: none; }
+  .gameHead .score { font-size: 1.8em; }
+}
