@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"path"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -25,10 +26,14 @@ type Games struct {
 // GameInfo is a game and where it comes from.
 type GameInfo struct {
 	analysis.Game
-	Date     string    `json:"date,omitempty"`
-	GameNo   string    `json:"gameNo,omitempty"`
-	Teams    [2]string `json:"teams"`
-	Score    [2]int    `json:"score"`
+	Date   string    `json:"date,omitempty"`
+	GameNo string    `json:"gameNo,omitempty"`
+	Teams  [2]string `json:"teams"`
+	Score  [2]int    `json:"score"`
+	// TeamIDs: the teams as the used file names them (TeamID), before
+	// merged teams get their merged name.
+	TeamIDs  [2]string `json:"-"`
+	original [2]*replay.Team
 	Versions []*Version
 	// The versions used: the scoreboard file with the most in it, and the
 	// statsbook uploaded last (nil if none).
@@ -118,6 +123,10 @@ func (ns *Namespace) Games() *Games {
 			g.Compared = true
 		}
 		g.Score = derive.Scores(g.Stats)
+		for i := 0; i < 2 && i < len(g.Stats.Teams); i++ {
+			g.original[i] = g.Stats.Teams[i]
+			g.TeamIDs[i] = TeamID(g.Stats.Teams[i])
+		}
 		h := sha1.Sum([]byte(g.Tournament + "|" + g.Date + "|" + g.GameNo + "|" + g.Teams[0] + "|" + g.Teams[1]))
 		g.ID = hex.EncodeToString(h[:5])
 		for gs.ByID[g.ID] != nil {
@@ -125,14 +134,32 @@ func (ns *Namespace) Games() *Games {
 		}
 		g.Label = label(g)
 		gs.ByID[g.ID] = g
+	}
+	merged := ns.mergedTeams(gs.List)
+	for _, g := range gs.List {
 		// The stats name games by summary id: shallow copies with the game's.
+		// A merged team gets its merged name, for the tournament stats too
+		// (the game keeps its id).
 		for _, sum := range []**replay.Summary{&g.Stats, &g.Scoreboard} {
-			if *sum != nil {
-				c := **sum
-				c.ID = g.ID
-				*sum = &c
+			if *sum == nil {
+				continue
 			}
+			c := **sum
+			c.ID = g.ID
+			c.Teams = slices.Clone(c.Teams)
+			for i, t := range c.Teams {
+				if mt := merged[TeamID(t)]; mt != nil {
+					named := *t
+					named.League, named.TeamName, named.Name = mt.League, mt.Name, mt.Name
+					c.Teams[i] = &named
+					if sum == &g.Stats && i < 2 {
+						g.Teams[i] = TeamName(&named)
+					}
+				}
+			}
+			*sum = &c
 		}
+		g.Label = label(g)
 	}
 	sort.SliceStable(gs.List, func(a, b int) bool {
 		x, y := gs.List[a], gs.List[b]

@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -55,6 +56,8 @@ type Namespace struct {
 	Name    string    `json:"name"`
 	Created time.Time `json:"created"`
 	Files   []*File   `json:"files"`
+	// TeamGroups: team spellings merged by hand.
+	TeamGroups []*TeamGroup `json:"teamGroups,omitempty"`
 
 	mu        sync.Mutex
 	dir       string
@@ -235,7 +238,7 @@ func (ns *Namespace) Snapshot() Namespace {
 		c := *f
 		files[i] = &c
 	}
-	return Namespace{ID: ns.ID, Name: ns.Name, Created: ns.Created, Files: files}
+	return Namespace{ID: ns.ID, Name: ns.Name, Created: ns.Created, Files: files, TeamGroups: slices.Clone(ns.TeamGroups)}
 }
 
 // Rename changes the namespace's name.

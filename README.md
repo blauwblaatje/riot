@@ -23,6 +23,29 @@ Several tournaments together (say European Play-offs and Champs) give one
 set of stats over all their games; teams are recognised across games by
 league and roster, as in the scoreboard's tournament stats.
 
+## Teams over seasons
+
+The namespace page has two views. **Tournaments** is the above.
+**Teams** follows one team over its seasons, with every game in the
+namespace, whatever its tournament:
+
+- **Club seasons** run from 1 August to 31 July ("2025/26"); **WFTDA
+  seasons** run two years from 1 June, the first from 1 June 2024
+  ("2024–2026"); earlier games are "Before June 2024". A game without a
+  date has no season and is listed apart.
+- Per season: games, wins and losses, points for and against, margin, lead
+  jammer %, points per jam, penalties, with charts over the seasons, and per
+  season the games and the team's skaters.
+- A team is its league and team name as the files write them; capitals,
+  accents, punctuation and spaces don't count, and a team name that is the
+  league's is no team name. A league's A and B teams are separate teams.
+- **Team names** merges the spellings of one team (a typo, "Rotterdam RD",
+  or a team that changed its name, as the Death Row Honeys became the
+  Harbour Honeys) under one name; it suggests teams with mostly the same
+  skater numbers that never played each other. A merge can be renamed and
+  split again, is kept in `namespace.json`, and counts in the tournament
+  stats too.
+
 ## How games are put together
 
 A game is identified by tournament, date and game number, or, without a
@@ -128,9 +151,9 @@ and arm64.
 | | |
 |---|---|
 | `cmd/riot` | the server |
-| `internal/store` | namespaces, uploads (json, xlsx, zip), grouping files into games |
+| `internal/store` | namespaces, uploads (json, xlsx, zip), grouping files into games, teams and seasons (`teams.go`) |
 | `internal/analysis` | corrections (`compare.go`), crews (`crews.go`), timing (`timing.go`) |
-| `internal/web` | the site: one page per namespace (`static/app.js`), JSON API under `/n/<id>/api` |
+| `internal/web` | the site: one page per namespace (`static/app.js`, the Teams view in `static/teams.js`), JSON API under `/n/<id>/api` |
 
 The reading of files and the tournament stats come from the CRG Go rewrite
 (`../crg-format`, module `crgformat`), vendored in `vendor/crgformat` so the
@@ -140,6 +163,8 @@ API, for scripts: `GET /n/<id>/api` (files, tournaments, games), `POST
 /n/<id>/api/files` (multipart: `tournament`, `files`…), `PATCH|DELETE
 /n/<id>/api/files/<fid>`, `GET /n/<id>/api/stats?t=<tournament>&t=…&date=`,
 `GET /n/<id>/api/games/<gid>` (a game's stats, score after every jam, and
-corrections).
+corrections), `GET /n/<id>/api/teams` (teams, merged teams, suggestions),
+`PUT /n/<id>/api/teams` (`{"groups": [{"name", "members": [team ids]}]}`,
+replaces all merges), `GET /n/<id>/api/seasons?team=<key>&kind=club|wftda`.
 
 GPL-3.

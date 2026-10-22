@@ -80,6 +80,9 @@ func (s *Site) Handler() http.Handler {
 	mux.HandleFunc("DELETE /n/{id}/api/files/{fid}", s.withNS(s.removeFile))
 	mux.HandleFunc("GET /n/{id}/api/games/{gid}", s.withNS(s.game))
 	mux.HandleFunc("GET /n/{id}/api/stats", s.withNS(s.stats))
+	mux.HandleFunc("GET /n/{id}/api/teams", s.withNS(s.teams))
+	mux.HandleFunc("PUT /n/{id}/api/teams", s.withNS(s.setTeams))
+	mux.HandleFunc("GET /n/{id}/api/seasons", s.withNS(s.seasons))
 	mux.HandleFunc("POST /log", s.clientLog)
 	mux.HandleFunc("POST /n/{id}/log", s.clientLog)
 	return s.logRequests(securityHeaders(mux))
@@ -550,6 +553,55 @@ func (s *Site) stats(w http.ResponseWriter, r *http.Request, ns *store.Namespace
 	resp.NSOs = analysis.ComputeCrews(games, resp.Stats, analysis.KindNSO)
 	resp.Fixes = analysis.CommonFixes(games)
 	writeJSON(w, resp)
+}
+
+// --- teams over seasons ---------------------------------------------------------------------
+
+// teams lists the namespace's teams, the merged ones and the merges
+// suggested by the skater numbers.
+func (s *Site) teams(w http.ResponseWriter, r *http.Request, ns *store.Namespace) {
+	snap := ns.Snapshot()
+	groups := snap.TeamGroups
+	if groups == nil {
+		groups = []*store.TeamGroup{}
+	}
+	tl := ns.Teams()
+	writeJSON(w, map[string]any{"teams": tl.List, "suggestions": tl.Suggestions, "groups": groups})
+}
+
+// setTeams replaces the merged teams: {"groups": [{"name", "members": [team ids]}]}.
+func (s *Site) setTeams(w http.ResponseWriter, r *http.Request, ns *store.Namespace) {
+	var body struct{ Groups []*store.TeamGroup }
+	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<20)).Decode(&body); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	if err := ns.SetTeamGroups(body.Groups); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	s.logf(ns.ID, "merged teams: %d groups", len(body.Groups))
+	s.teams(w, r, ns)
+}
+
+// seasons: ?team=<key>&kind=club|wftda.
+func (s *Site) seasons(w http.ResponseWriter, r *http.Request, ns *store.Namespace) {
+	kind := r.URL.Query().Get("kind")
+	if kind != store.SeasonWFTDA {
+		kind = store.SeasonClub
+	}
+	seasons, undated, err := ns.Seasons(r.URL.Query().Get("team"), kind)
+	if err != nil {
+		http.Error(w, "no such team", http.StatusNotFound)
+		return
+	}
+	if seasons == nil {
+		seasons = []*store.Season{}
+	}
+	if undated == nil {
+		undated = []*store.SeasonGame{}
+	}
+	writeJSON(w, map[string]any{"kind": kind, "seasons": seasons, "undated": undated})
 }
 
 func writeJSON(w http.ResponseWriter, v any) {
