@@ -2,7 +2,10 @@ module riot
 
 go 1.25.0
 
-require crgformat v0.0.0
+require (
+	crgformat v0.0.0
+	golang.org/x/text v0.38.0
+)
 
 require (
 	github.com/richardlehane/mscfb v1.0.7 // indirect
@@ -14,7 +17,6 @@ require (
 	github.com/xuri/nfp v0.0.2-0.20250530014748-2ddeb826f9a9 // indirect
 	golang.org/x/crypto v0.53.0 // indirect
 	golang.org/x/net v0.56.0 // indirect
-	golang.org/x/text v0.38.0 // indirect
 )
 
 replace crgformat => ../crg-format
