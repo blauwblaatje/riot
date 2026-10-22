@@ -136,6 +136,20 @@ func played(s *replay.Summary) bool {
 // ComputeTournament works out the stats of a tournament's games; games
 // without a jam played are left out.
 func ComputeTournament(name string, games []*replay.Summary) *Tourn {
+	return computeTournament(name, games, nil)
+}
+
+// TeamID is a team over several games, as the caller recognises it.
+type TeamID struct{ Key, Name, League string }
+
+// ComputeTournamentWith is ComputeTournament with the teams given by the
+// caller instead of recognised by league and roster: team gives game s's
+// team i (0 or 1).
+func ComputeTournamentWith(name string, games []*replay.Summary, team func(s *replay.Summary, i int) TeamID) *Tourn {
+	return computeTournament(name, games, team)
+}
+
+func computeTournament(name string, games []*replay.Summary, team func(s *replay.Summary, i int) TeamID) *Tourn {
 	var gs []*replay.Summary
 	for _, s := range games {
 		if played(s) {
@@ -151,7 +165,18 @@ func ComputeTournament(name string, games []*replay.Summary) *Tourn {
 	})
 	out := &Tourn{Name: name, Games: []*GameResult{}, Teams: []*TeamTotals{}, Skaters: []*SkaterTot{}, TopJams: []*JamRecord{},
 		JamScores: []*ScoreCount{}, JamEnds: map[string]int{}, PenaltyCodes: map[string]int{}}
-	keys := teamKeys(gs)
+	var keys [][2]teamKey
+	if team == nil {
+		keys = teamKeys(gs)
+	} else {
+		keys = make([][2]teamKey, len(gs))
+		for gi, s := range gs {
+			for i := 0; i < 2 && i < len(s.Teams); i++ {
+				id := team(s, i)
+				keys[gi][i] = teamKey{key: id.Key, name: id.Name, league: id.League}
+			}
+		}
+	}
 	teams := map[string]*TeamTotals{}
 	skaters := map[string]*SkaterTot{}
 	scores := map[string]int{}
