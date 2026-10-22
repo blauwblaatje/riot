@@ -181,3 +181,9 @@ table.compare th.t2c { color: var(--team2); }
   .gameHead .dash { display: none; }
   .gameHead .score { font-size: 1.8em; }
 }
+
+/* the Teams view */
+.top .seg { align-self: center; }
+details.season { border-top: 1px solid var(--line); padding: 8px 0; }
+details.season summary { cursor: pointer; padding: 4px 0; }
+.suggestion table.t td { border-bottom: 0; }

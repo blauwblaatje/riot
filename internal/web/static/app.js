@@ -1,6 +1,7 @@
 "use strict";
 // A namespace: its tournaments (pick one or more), the stats of the picked
 // ones, the crews, what the statsbooks corrected, and the uploaded files.
+// The Teams view (teams.js) shows a team over its seasons instead.
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -15,6 +16,8 @@ let day = params.get("date") || "";
 let tab = params.get("tab") || "";
 let crewKind = "referee";
 let gameId = params.get("game") || ""; // a game's own page, on the Games tab
+let view = params.get("view") === "teams" ? "teams" : "tournaments";
+let backToTeams = false; // a game opened from the Teams view goes back there
 const gameCache = {};
 const filter = { team: "", minJams: null };
 const sorts = {};
@@ -43,6 +46,7 @@ async function loadNS() {
   picked = picked.filter((t) => names.includes(t));
   if (!tab) tab = N.games.length ? "overview" : "files";
   renderTours();
+  if (view === "teams") return render();
   await loadStats();
 }
 
@@ -335,7 +339,7 @@ function gamePage() {
       .catch((e) => { $("main").innerHTML = `<p><button class="link" data-game="">← All games</button></p><p class="error">${esc(e.message)}</p>`; });
     return `<p class="muted">Loading the game…</p>`;
   }
-  const back = `<p><button class="link" data-game="">← All games</button></p>`;
+  const back = `<p><button class="link" data-game="">${backToTeams ? "← Back to the team" : "← All games"}</button></p>`;
   if (!G.stats) return back + `<div class="callout">${esc(G.label)}: no jams played in its files.</div>`;
   const st = G.stats, [A, B] = st.teams;
   // The names as in the game list (the league's), for the charts too.
@@ -723,6 +727,11 @@ async function patchFile(id, body) {
 // --- render & events ---------------------------------------------------------------------------
 
 function render() {
+  document.querySelectorAll("#views button").forEach((b) => b.classList.toggle("on", b.dataset.view === view));
+  $("tourBar").hidden = view === "teams";
+  $("teamBar").hidden = view !== "teams";
+  if (view === "teams") return renderTeams();
+  if (!S) { loadStats(); return; }
   document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab));
   $("scope").innerHTML = tab === "files" ? "" : scopeLine();
   if (tab !== "files" && !S.coverage.games) {
@@ -742,6 +751,25 @@ function wireDrop() {
   drop.addEventListener("drop", (e) => upload(e.dataTransfer.files));
 }
 
+function setView(v) {
+  view = v;
+  if (v === "tournaments") {
+    const u = new URL(location.href);
+    ["view", "team", "kind", "tpage"].forEach((k) => u.searchParams.delete(k));
+    history.replaceState(null, "", u);
+  }
+  render();
+}
+
+// showGame: a game's page, from the Teams view.
+function showGame(id) {
+  view = "tournaments";
+  const u = new URL(location.href);
+  ["view", "team", "kind", "tpage"].forEach((k) => u.searchParams.delete(k));
+  history.replaceState(null, "", u);
+  openGame(id);
+}
+
 function setTab(t) {
   tab = t;
   gameId = "";
@@ -753,9 +781,13 @@ function setTab(t) {
 }
 
 document.addEventListener("click", async (e) => {
+  const vb = e.target.closest("[data-view]");
+  if (vb) { backToTeams = false; if (vb.dataset.goto) tab = vb.dataset.goto; return setView(vb.dataset.view); }
+  if (view === "teams" && e.target.id !== "copyLink" && e.target.id !== "renameNS") return; // teams.js
   const b = e.target.closest("#tabs button");
   if (b) { if (b.dataset.tab === "games" && gameId) return openGame(""); return setTab(b.dataset.tab); }
   const gb = e.target.closest("button[data-game]");
+  if (gb && !gb.dataset.game && backToTeams) { backToTeams = false; gameId = ""; return setView("teams"); }
   if (gb) return openGame(gb.dataset.game);
   const go = e.target.closest("[data-goto]");
   if (go) return setTab(go.dataset.goto);

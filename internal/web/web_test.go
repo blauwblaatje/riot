@@ -7,6 +7,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -225,5 +226,49 @@ func TestUploadJunk(t *testing.T) {
 	r := res["results"].([]any)[0].(map[string]any)
 	if r["error"] == nil {
 		t.Errorf("junk accepted: %v", r)
+	}
+}
+
+func TestTeamsAndSeasons(t *testing.T) {
+	srv := newSite(t)
+	ns := create(t, srv, "Rotterdam")
+	upload(t, srv.URL+ns+"/api/files", "",
+		"../../../statsbooks/rotterdam/[WFTDA]STATS-2024-06-15_RotterdamRollerDerby_DeathRowHoneys_vs_GoldenCityRollers_GoldenCityRollers.xlsx",
+		"../../../statsbooks/rotterdam/[WFTDA]STATS-2024-10-26_RotterdamRollerDerby_RotterdamHarbourHoneys_vs_LondonRollerDerby_LondonBrawlSaints.xlsx")
+	tl := get(t, srv.URL+ns+"/api/teams")
+	if n := len(tl["teams"].([]any)); n != 4 {
+		t.Fatalf("%d teams, want 4", n)
+	}
+	sugg := tl["suggestions"].([]any)
+	if len(sugg) != 1 {
+		t.Fatalf("suggestions %v", sugg)
+	}
+	keys := sugg[0].(map[string]any)["teams"].([]any)
+	body, _ := json.Marshal(map[string]any{"groups": []map[string]any{{"name": "Harbour Honeys", "members": keys}}})
+	put := func(b string) *http.Response {
+		req, _ := http.NewRequest("PUT", srv.URL+ns+"/api/teams", strings.NewReader(b))
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return resp
+	}
+	tl = decode(t, put(string(body)))
+	team := tl["teams"].([]any)[0].(map[string]any)
+	if team["name"] != "Harbour Honeys" || team["games"].(float64) != 2 || len(tl["groups"].([]any)) != 1 {
+		t.Fatalf("merged: %v", team)
+	}
+	key := team["key"].(string)
+	for kind, n := range map[string]int{"club": 2, "wftda": 1} {
+		se := get(t, srv.URL+ns+"/api/seasons?kind="+kind+"&team="+url.QueryEscape(key))
+		if got := len(se["seasons"].([]any)); got != n {
+			t.Errorf("%s: %d seasons, want %d", kind, got, n)
+		}
+	}
+	if resp := put(`{"groups":[{"name":"","members":["a|"]}]}`); resp.StatusCode != 400 {
+		t.Errorf("a merged team without a name: %d", resp.StatusCode)
+	}
+	if resp, _ := http.Get(srv.URL + ns + "/api/seasons?team=nobody"); resp.StatusCode != 404 {
+		t.Errorf("seasons of an unknown team: %d", resp.StatusCode)
 	}
 }
