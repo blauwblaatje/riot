@@ -138,13 +138,18 @@ There is no login: the namespace's address is the key, as with RTFM.
 ```sh
 make image                         # docker build
 docker compose up -d               # http://localhost:4201
-make k3s-import                    # or push to a registry and set it in deploy/k8s/kustomization.yaml
 kubectl apply -k deploy/k8s        # namespace riot, 5 Gi volume, Traefik ingress (change the host)
 ```
 
 The image is distroless, runs as non-root with a read-only root file
-system, and keeps everything in `/data`. `make image-multi` builds amd64
-and arm64.
+system, and keeps everything in `/data`.
+
+It is published as `ghcr.io/blauwblaatje/riot`, for amd64 and arm64, by
+GitHub Actions (`.github/workflows/image.yml`): a tag `vX.Y.Z` publishes
+`X.Y.Z`, `X.Y` and `latest`, which Renovate can follow; a push to main
+publishes `sha-<commit>`. To release: `git tag v0.2.0 && git push origin
+v0.2.0`. Without a registry, `make k3s-import` loads the image into k3s;
+set `newName: riot` and `newTag: latest` in `deploy/k8s/kustomization.yaml`.
 
 ## Code
 
