@@ -512,6 +512,11 @@ func (c *converter) emitJam(j *jamInfo, periodID string) {
 			id := tr.str("Id")
 			jc := tr.int("JamClockStart")
 			tripT = max(tripT, j.start+jc)
+			if ended {
+				// The jam clock can run a little ahead of wall time: a
+				// trip started as the jam ended must not come after it.
+				tripT = min(tripT, endT)
+			}
 			if tr.id == "1" {
 				c.trips[id] = j.id + "/" + tid + "/t1"
 			} else {
