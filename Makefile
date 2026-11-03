@@ -28,7 +28,7 @@ test:
 vendor:
 	go mod tidy
 	go mod vendor
-	rm -f vendor/crgformat/crgserver
+	rm -f vendor/crgformat/crgserver vendor/crgformat/CLAUDE.md
 
 image:
 	docker build --build-arg VERSION=$(VERSION) -t $(IMAGE):$(VERSION) -t $(IMAGE):latest .
