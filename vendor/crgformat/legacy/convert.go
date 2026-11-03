@@ -189,14 +189,21 @@ func (c *converter) run() error {
 	g := c.g
 	c.gid = g.id
 	rules := g.values("Rule")
-	ov, err := overrides(c.version, rules)
+	rv, ok := rulesVersion(c.version)
+	if !ok {
+		return fmt.Errorf("no rule defaults known for scoreboard version %q", c.version)
+	}
+	if rv != c.version {
+		c.notef("no rule defaults known for %s; used those of %s", c.version, rv)
+	}
+	ov, err := overrides(rv, rules)
 	if err != nil {
 		return err
 	}
-	if c.periodLen, err = parseClock(ruleValue(c.version, rules, "Period.Duration")); err != nil {
+	if c.periodLen, err = parseClock(ruleValue(rv, rules, "Period.Duration")); err != nil {
 		return err
 	}
-	if c.jamLen, err = parseClock(ruleValue(c.version, rules, "Jam.Duration")); err != nil {
+	if c.jamLen, err = parseClock(ruleValue(rv, rules, "Jam.Duration")); err != nil {
 		return err
 	}
 
@@ -223,7 +230,7 @@ func (c *converter) run() error {
 	if u := g.str("LastFileUpdate"); u != "" && u != "Never" {
 		info["importedLastUpdate"] = u // when the Java version last saved this game (local time)
 	}
-	ruleset := m{"base": "WFTDARuleset", "baseVersion": c.version, "overrides": ov}
+	ruleset := m{"base": "WFTDARuleset", "baseVersion": rv, "overrides": ov}
 	if name := g.str("RulesetName"); name != "" {
 		ruleset["name"] = name
 	}

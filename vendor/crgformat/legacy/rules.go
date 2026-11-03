@@ -17,13 +17,38 @@ type ruleDef struct {
 // share a table. v2025.6 lacks five rules added later (Period.JamsPer,
 // Lineup.StopsPeriodClock, Score.PointsOnInitial, Score.EnforceTimeToOr,
 // Penalties.PointsDeduction); the defaults of the others are the same. A
-// version not listed here is refused rather than guessed: see README
-// "Rulesets".
+// version not listed here falls back to the newest listed release of the same
+// year (rulesVersion); one without such a release is refused rather than
+// guessed: see README "Rulesets".
 var ruleDefaults = map[string]map[string]ruleDef{
 	"v2025.6":  defaults2025_6,
 	"v2025.9":  defaults2025_10,
 	"v2025.10": defaults2025_10,
 	"v2027.1":  defaults2025_10,
+}
+
+// rulesVersion returns the version whose rule defaults apply to a file
+// written by version: version itself when it is known, otherwise the newest
+// known release of the same year (v2025.7 → v2025.10). Rules don't change
+// much within a year; a rule the fallback doesn't know still fails in
+// overrides.
+func rulesVersion(version string) (string, bool) {
+	if _, ok := ruleDefaults[version]; ok {
+		return version, true
+	}
+	year, _, ok := strings.Cut(version, ".")
+	if !ok {
+		return "", false
+	}
+	best, bestMinor := "", -1
+	for v := range ruleDefaults {
+		y, minor, _ := strings.Cut(v, ".")
+		n, err := strconv.Atoi(minor)
+		if y == year && err == nil && n > bestMinor {
+			best, bestMinor = v, n
+		}
+	}
+	return best, best != ""
 }
 
 // overrides returns the rules whose value differs from the version's

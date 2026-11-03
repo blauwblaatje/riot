@@ -462,9 +462,17 @@ go run ./cmd/crgconvert [-o DIR] [-v] old-games/*.json
 For each file it builds the event log, replays it, and compares the result
 with the values the Java version calculated. With `-o` it writes
 `<name>.events.jsonl` and `<name>.json` to DIR. It exits with status 1 if any
-file fails or differs. It knows the rule defaults of v2025.10 and v2027.1
-(`legacy/defaults_*.go`, generated from `Rule.java` by
-`legacy/gen_defaults.py`) and refuses files from other versions.
+file fails or differs. It knows the rule defaults of v2025.6, v2025.9,
+v2025.10 and v2027.1 (`legacy/defaults_*.go`, generated from `Rule.java` by
+`legacy/gen_defaults.py`). A file from another release uses the newest known
+release of the same year (v2025.7 → v2025.10, noted in the result, and that
+version goes in `baseVersion`); a year with no known release is refused.
+
+`tools/java/` builds and tests a checkout of the Java scoreboard without Ant
+(`build.sh`, `test.sh`), and `compare-export.sh CHECKOUT OUT` checks the
+Java event log export against this converter: both convert the same files
+(default `../old-games`), the logs must be equal apart from the import
+fields, and every Java log must pass `crgreplay verify`.
 
 `go test ./...` runs the converter over every file in `../old-games/` when
 that directory exists, and the charter reader over every WFTDA charter in
