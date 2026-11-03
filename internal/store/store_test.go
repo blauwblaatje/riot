@@ -92,3 +92,61 @@ func TestOldGames(t *testing.T) {
 	t.Logf("timing: %d games %d jams; jam mean %.0f lead mean %.0f lineup mean %.0f, penaltyAt n=%d, timeouts %+v %+v %+v",
 		tm.Games, tm.Jams, tm.JamLength.Mean, tm.LeadAt.Mean, tm.Lineup.Mean, tm.PenaltyAt.N, *tm.Timeouts["team"], *tm.Timeouts["official"], *tm.Timeouts["review"])
 }
+
+// TestReread reads a kept file again: a file that had no games gets them,
+// and its tournament and upload time stay.
+func TestReread(t *testing.T) {
+	game, err := os.ReadFile("../../../old-games/STATS-2025-10-10_RaceCityRebels_vs_Disorder_1.json")
+	if err != nil {
+		t.Skip("no ../../../old-games")
+	}
+	dir := t.TempDir()
+	s, err := Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ns, err := s.Create("Reread")
+	if err != nil {
+		t.Fatal(err)
+	}
+	added, err := ns.Add("game.json", []byte("{}"), "Cup", time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	f := added[0]
+	if f.Error == "" || len(ns.Games().List) != 0 {
+		t.Fatalf("an empty file: error %q, %d games", f.Error, len(ns.Games().List))
+	}
+	path, _, err := ns.FilePath(f.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, game, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	g, err := ns.Reread(f.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if g.Error != "" || len(g.Entries) != 1 || g.Entries[0].Jams == 0 {
+		t.Fatalf("after reread: error %q, entries %+v", g.Error, g.Entries)
+	}
+	uploaded := f.Uploaded
+	s2, err := Open(dir) // what was saved
+	if err != nil {
+		t.Fatal(err)
+	}
+	ns2, err := s2.Get(ns.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if h := ns2.Snapshot().Files[0]; h.Tournament != "Cup" || !h.Uploaded.Equal(uploaded) || h.Error != "" || len(h.Entries) != 1 {
+		t.Errorf("saved after reread: %+v", h)
+	}
+	if gs := ns2.Games().List; len(gs) != 1 || gs[0].Tournament != "Cup" {
+		t.Errorf("games after reread: %d", len(gs))
+	}
+	if _, err := ns.Reread("nosuchfile"); err != ErrNotFound {
+		t.Errorf("unknown file: err = %v", err)
+	}
+}

@@ -109,9 +109,70 @@ func sniff(data []byte) (string, error) {
 // read reads one file's games and keeps the file.
 func (ns *Namespace) read(name, kind string, data []byte, tournament string, batch time.Time) (*File, error) {
 	f := &File{ID: newID(6), Name: name, Kind: kind, Size: int64(len(data)), Uploaded: batch.UTC(),
-		Tournament: strings.TrimSpace(tournament), Entries: []*Entry{}}
+		Tournament: strings.TrimSpace(tournament)}
+	sums := ns.parse(f, data)
+	ns.mu.Lock()
+	defer ns.mu.Unlock()
+	if err := os.WriteFile(filepath.Join(ns.dir, "files", f.ID+ext(kind)), data, 0o644); err != nil {
+		return nil, err
+	}
+	if err := ns.keep(f, sums); err != nil {
+		return nil, err
+	}
+	ns.Files = append(ns.Files, f)
+	return f, ns.save()
+}
+
+// Reread reads a kept file again, for when RIOT has learnt to read more
+// (a newer scoreboard version, a statsbook fix). The tournament, "leave out"
+// and upload time stay.
+func (ns *Namespace) Reread(id string) (*File, error) {
+	ns.mu.Lock()
+	f := ns.file(id)
+	if f == nil {
+		ns.mu.Unlock()
+		return nil, ErrNotFound
+	}
+	nf := &File{Name: f.Name, Kind: f.Kind}
+	path := filepath.Join(ns.dir, "files", f.ID+ext(f.Kind))
+	ns.mu.Unlock()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	sums := ns.parse(nf, data)
+	ns.mu.Lock()
+	defer ns.mu.Unlock()
+	if f = ns.file(id); f == nil {
+		return nil, ErrNotFound // deleted meanwhile
+	}
+	f.Error, f.Entries = nf.Error, nf.Entries
+	if err := ns.keep(f, sums); err != nil {
+		return nil, err
+	}
+	return f, ns.save()
+}
+
+// keep writes the games read from f (ns.mu held).
+func (ns *Namespace) keep(f *File, sums []*replay.Summary) error {
+	if err := writeSummaries(filepath.Join(ns.dir, "read", f.ID+".json.gz"), sums); err != nil {
+		return err
+	}
+	if ns.summaries == nil {
+		ns.summaries = map[string][]*replay.Summary{}
+	}
+	ns.summaries[f.ID] = sums
+	ns.games = nil
+	return nil
+}
+
+// parse reads the games in data into f's Entries and Error, and returns
+// their summaries (nil for a game that can't be counted).
+func (ns *Namespace) parse(f *File, data []byte) []*replay.Summary {
+	f.Entries = []*Entry{}
+	name := f.Name
 	var sums []*replay.Summary
-	switch kind {
+	switch f.Kind {
 	case KindScoreboard:
 		results, err := legacy.ConvertFile(data, name, ns.v)
 		if err != nil {
@@ -155,21 +216,7 @@ func (ns *Namespace) read(name, kind string, data []byte, tournament string, bat
 		}
 		f.Entries = append(f.Entries, e)
 	}
-	ns.mu.Lock()
-	defer ns.mu.Unlock()
-	if err := os.WriteFile(filepath.Join(ns.dir, "files", f.ID+ext(kind)), data, 0o644); err != nil {
-		return nil, err
-	}
-	if err := writeSummaries(filepath.Join(ns.dir, "read", f.ID+".json.gz"), sums); err != nil {
-		return nil, err
-	}
-	if ns.summaries == nil {
-		ns.summaries = map[string][]*replay.Summary{}
-	}
-	ns.summaries[f.ID] = sums
-	ns.Files = append(ns.Files, f)
-	ns.games = nil
-	return f, ns.save()
+	return sums
 }
 
 func describe(e *Entry, s *replay.Summary) {

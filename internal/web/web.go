@@ -78,6 +78,7 @@ func (s *Site) Handler() http.Handler {
 	mux.HandleFunc("GET /n/{id}/api/files/{fid}", s.withNS(s.download))
 	mux.HandleFunc("PATCH /n/{id}/api/files/{fid}", s.withNS(s.updateFile))
 	mux.HandleFunc("DELETE /n/{id}/api/files/{fid}", s.withNS(s.removeFile))
+	mux.HandleFunc("POST /n/{id}/api/files/{fid}/reread", s.withNS(s.rereadFile))
 	mux.HandleFunc("GET /n/{id}/api/games/{gid}", s.withNS(s.game))
 	mux.HandleFunc("GET /n/{id}/api/stats", s.withNS(s.stats))
 	mux.HandleFunc("GET /n/{id}/api/teams", s.withNS(s.teams))
@@ -425,6 +426,20 @@ func (s *Site) updateFile(w http.ResponseWriter, r *http.Request, ns *store.Name
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
+	s.info(w, r, ns)
+}
+
+func (s *Site) rereadFile(w http.ResponseWriter, r *http.Request, ns *store.Namespace) {
+	f, err := ns.Reread(r.PathValue("fid"))
+	if errors.Is(err, store.ErrNotFound) {
+		http.Error(w, "no such file", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	s.logf(ns.ID, "reread %q: %d games %s", f.Name, len(f.Entries), f.Error)
 	s.info(w, r, ns)
 }
 

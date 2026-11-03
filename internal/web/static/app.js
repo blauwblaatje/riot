@@ -667,7 +667,8 @@ function filesTab() {
       <td class="l wrap">${entries}</td>
       <td class="l small">${esc(new Date(f.uploaded).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }))}</td>
       <td class="l"><label class="small"><input type="checkbox" data-ignore="${f.id}" ${f.ignored ? "checked" : ""}> leave out</label></td>
-      <td><button class="quiet danger" data-delete="${f.id}" title="Delete this file">Delete</button></td></tr>`;
+      <td><button class="quiet" data-reread="${f.id}" title="Read this file again, e.g. after a RIOT update">Re-read</button>
+        <button class="quiet danger" data-delete="${f.id}" title="Delete this file">Delete</button></td></tr>`;
   };
   return `<div class="drop" id="drop">
       <b>Drop scoreboard files (.json), statsbooks (.xlsx) or a zip here</b>
@@ -808,6 +809,17 @@ document.addEventListener("click", async (e) => {
     return;
   }
   if (e.target.id === "uploadBtn") return upload($("fileInput").files);
+  const rr = e.target.closest("[data-reread]");
+  if (rr) {
+    rr.disabled = true;
+    try {
+      N = await getJSON(api("/files/" + rr.dataset.reread + "/reread"), { method: "POST" });
+    } finally {
+      rr.disabled = false;
+    }
+    renderTours();
+    return loadStats();
+  }
   const del = e.target.closest("[data-delete]");
   if (del) {
     const f = N.files.find((x) => x.id === del.dataset.delete);

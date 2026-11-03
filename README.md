@@ -17,7 +17,7 @@ tournament produces anyway: the **CRG scoreboard's game files** (Java,
 | Timing | jam lengths, time to lead, when lead jammers call it off, when penalties are called, lineup time, timeouts and their length, quickest jammers to lead, game length | **scoreboard files only**: a statsbook has no times, so games with only a statsbook are left out, and the tab says so |
 | Crews | referee and NSO crews, their penalties per game and per code, against what the same teams got from the other crews of the tournament; official reviews, official timeouts; for NSO crews the corrections in their statsbooks | both |
 | Corrections | what the statsbook shows differently from the scoreboard file, per area (score, lineups, box, penalties, roster, officials), the most common kinds ("box symbols `- SP:$` → `SP:+`", "penalty code B → F") and every game's list | games with both |
-| Files | uploads, each file's games, its tournament, leave a file out, delete | |
+| Files | uploads, each file's games, its tournament, leave a file out, re-read (after a RIOT update), delete | |
 
 Several tournaments together (say European Play-offs and Champs) give one
 set of stats over all their games; teams are recognised across games by
@@ -166,7 +166,7 @@ repository builds on its own; `make vendor` refreshes it.
 
 API, for scripts: `GET /n/<id>/api` (files, tournaments, games), `POST
 /n/<id>/api/files` (multipart: `tournament`, `files`…), `PATCH|DELETE
-/n/<id>/api/files/<fid>`, `GET /n/<id>/api/stats?t=<tournament>&t=…&date=`,
+/n/<id>/api/files/<fid>`, `POST /n/<id>/api/files/<fid>/reread`, `GET /n/<id>/api/stats?t=<tournament>&t=…&date=`,
 `GET /n/<id>/api/games/<gid>` (a game's stats, score after every jam, and
 corrections), `GET /n/<id>/api/teams` (teams, merged teams, suggestions),
 `PUT /n/<id>/api/teams` (`{"groups": [{"name", "members": [team ids]}]}`,
