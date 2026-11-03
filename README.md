@@ -86,6 +86,14 @@ fact (`internal/analysis/compare.go`):
   not a change in every jam they skated), captain and not-skating marks,
   officials and their roles, head referee and head NSO.
 
+What the scoreboard file didn't track isn't compared: a game without
+lineup and penalty trackers on laptops (e.g. LATAM 2026) has the jammer and
+pivot, often entered by the scoreboard operator, and no blockers, penalties
+or box trips. When the file has less than a tenth of the statsbook's
+blockers, penalties or box symbols, that part is left out (box symbols too
+when the penalties are), and the game says so. Jammers and pivots are still
+compared.
+
 An unedited statsbook exported by the Java scoreboard compares as equal to
 its game file (checked on the MRDWC 2026 test games), so what's left are
 the edits. A statsbook saved before the post-game check shows none.

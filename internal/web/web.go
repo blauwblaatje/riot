@@ -468,6 +468,7 @@ type GameResponse struct {
 	Codes      [2]map[string]int  `json:"codes"`      // penalties per code, per team
 	Compared   bool               `json:"compared"`
 	Changes    []*analysis.Change `json:"changes"`
+	Untracked  []string           `json:"untracked"` // not in the scoreboard file, so not compared: blockers, penalties, box
 }
 
 // game is one game's sources, stats and what its statsbook changed.
@@ -479,9 +480,12 @@ func (s *Site) game(w http.ResponseWriter, r *http.Request, ns *store.Namespace)
 	}
 	v := GameResponse{ID: g.ID, Label: g.Label, Tournament: g.Tournament, Date: g.Date, GameNo: g.GameNo, Teams: g.Teams, Score: g.Score,
 		Statsbook: g.UsedStatsbook != nil, Scoreboard: g.Scoreboard != nil, Compared: g.Compared, Changes: g.Changes,
-		Codes: [2]map[string]int{{}, {}}}
+		Untracked: g.Untracked, Codes: [2]map[string]int{{}, {}}}
 	if v.Changes == nil {
 		v.Changes = []*analysis.Change{}
+	}
+	if v.Untracked == nil {
+		v.Untracked = []string{}
 	}
 	if g.Stats != nil {
 		v.Stats = stats.Compute(g.Stats)

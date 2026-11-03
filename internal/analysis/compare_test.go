@@ -3,6 +3,8 @@ package analysis
 import (
 	"encoding/json"
 	"os"
+	"slices"
+	"strings"
 	"testing"
 
 	"crgformat"
@@ -39,7 +41,7 @@ func clone(t *testing.T, s *replay.Summary) *replay.Summary {
 
 func TestCompare(t *testing.T) {
 	s := game18(t)
-	if cs := Compare(s, clone(t, s)); len(cs) != 0 {
+	if cs, _ := Compare(s, clone(t, s)); len(cs) != 0 {
 		t.Fatalf("a game differs from itself: %+v", cs[0])
 	}
 
@@ -70,7 +72,7 @@ func TestCompare(t *testing.T) {
 			break
 		}
 	}
-	cs := Compare(s, c)
+	cs, _ := Compare(s, c)
 	kinds := map[string]*Change{}
 	for _, ch := range cs {
 		kinds[ch.Kind] = ch
@@ -104,9 +106,52 @@ func TestCompare(t *testing.T) {
 		}
 	}
 	c.Penalties = pens
-	cs = Compare(s, c)
+	cs, _ = Compare(s, c)
 	if len(cs) != 1 || cs[0].Kind != "statsbook stops early" {
 		t.Errorf("early statsbook: %d changes, first %+v", len(cs), cs[0])
+	}
+}
+
+// TestCompareUntracked: a scoreboard file with only the jammers and pivots
+// (no lineup or penalty trackers on laptops) has its blockers, penalties
+// and box symbols left out of the comparison; its jammers still count.
+func TestCompareUntracked(t *testing.T) {
+	sb := game18(t)
+	g := clone(t, sb)
+	g.Penalties, g.BoxTrips, g.Expulsions = nil, nil, nil
+	var jamKey string
+	for _, p := range g.Periods {
+		for _, j := range p.Jams {
+			for _, tj := range j.Teams {
+				for pos := range tj.Lineup {
+					if strings.HasPrefix(pos, "Blocker") {
+						delete(tj.Lineup, pos)
+					}
+				}
+			}
+		}
+	}
+	// One real correction: the statsbook has another jammer in a jam.
+	j := g.Periods[0].Jams[2]
+	jamKey = "P1 J" + itoa(j.Number)
+	j.Teams[0].Lineup["Jammer"].Skater = j.Teams[0].Lineup["Pivot"].Skater
+	delete(j.Teams[0].Lineup, "Pivot")
+	cs, skipped := Compare(g, sb)
+	if !slices.Equal(skipped, []string{UntrackedBlockers, UntrackedPenalties, UntrackedBox}) {
+		t.Errorf("skipped %v", skipped)
+	}
+	for _, ch := range cs {
+		if ch.Where != jamKey || ch.Area != AreaLineups {
+			t.Errorf("unexpected change %+v", *ch)
+		}
+	}
+	if len(cs) == 0 {
+		t.Error("the jammer change is missing")
+	}
+
+	// A file that tracked everything skips nothing.
+	if _, skipped := Compare(sb, clone(t, sb)); len(skipped) != 0 {
+		t.Errorf("skipped %v for a full file", skipped)
 	}
 }
 

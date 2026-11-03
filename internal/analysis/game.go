@@ -23,6 +23,9 @@ type Game struct {
 	// file; Compared is false unless the game has both.
 	Changes  []*Change
 	Compared bool
+	// Untracked: what the scoreboard file didn't track and so wasn't
+	// compared (Untracked*).
+	Untracked []string
 }
 
 // --- common fixes ---------------------------------------------------------------------

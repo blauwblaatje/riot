@@ -232,12 +232,65 @@ func NormName(s string) string { return strings.Join(strings.Fields(strings.ToLo
 
 // --- comparing -----------------------------------------------------------------------
 
+// What a scoreboard file may not have tracked at all, e.g. a game without
+// lineup and penalty trackers on laptops: the jammer and pivot are then often
+// filled in by the scoreboard operator, the rest only on paper.
+const (
+	UntrackedBlockers  = "blockers"
+	UntrackedPenalties = "penalties"
+	UntrackedBox       = "box"
+)
+
+// untracked tells which parts of the paperwork the scoreboard file (a) has
+// next to nothing of, less than a tenth of what the statsbook (b) has.
+// Without penalties, box trips are a box timer's, not a penalty tracker's.
+func untracked(a, b *paper) map[string]bool {
+	count := func(p *paper) (blockers, symbols int) {
+		for _, pair := range p.jams {
+			for _, t := range pair {
+				if t == nil {
+					continue
+				}
+				for _, pos := range t.pos {
+					if pos == "Blocker" {
+						blockers++
+					}
+				}
+				symbols += len(t.symbols)
+			}
+		}
+		return
+	}
+	ba, sa := count(a)
+	bb, sb := count(b)
+	out := map[string]bool{}
+	few := func(x, y int) bool { return y > 0 && x*10 < y }
+	if few(ba, bb) {
+		out[UntrackedBlockers] = true
+	}
+	if few(len(a.penalties), len(b.penalties)) {
+		out[UntrackedPenalties] = true
+	}
+	if out[UntrackedPenalties] || few(sa, sb) {
+		out[UntrackedBox] = true
+	}
+	return out
+}
+
 // Compare lists what the statsbook (sb) shows differently from the
 // scoreboard's game file (game). Skaters are compared by number, after
 // renumbering a skater whose number the statsbook changed; blockers are
 // compared as a set (the lineup sheet's blocker order means nothing).
-func Compare(game, sb *replay.Summary) []*Change {
+// What the scoreboard file didn't track (Untracked*) isn't compared:
+// skipped lists it.
+func Compare(game, sb *replay.Summary) (changes []*Change, skipped []string) {
 	a, b := paperOf(game), paperOf(sb)
+	skip := untracked(a, b)
+	for _, k := range []string{UntrackedBlockers, UntrackedPenalties, UntrackedBox} {
+		if skip[k] {
+			skipped = append(skipped, k)
+		}
+	}
 	var out []*Change
 	add := func(c *Change) { out = append(out, c) }
 
@@ -347,10 +400,14 @@ func Compare(game, sb *replay.Summary) []*Change {
 				continue
 			}
 			team := strconv.Itoa(i + 1)
-			compareTeamJam(key, team, i, ta, tb, num, add)
+			compareTeamJam(key, team, i, ta, tb, num, skip, add)
 		}
 	}
 
+	if skip[UntrackedPenalties] {
+		sortChanges(out, a, b)
+		return out, skipped
+	}
 	// Penalties: the same penalty, in that order of likeliness, with another
 	// code, skater or jam; the rest added or removed.
 	// Penalties in a jam only one of them has are part of that change.
@@ -416,7 +473,7 @@ func Compare(game, sb *replay.Summary) []*Change {
 		}
 	}
 	sortChanges(out, a, b)
-	return out
+	return out, skipped
 }
 
 func flagKind(flag string, on bool) string {
@@ -426,7 +483,7 @@ func flagKind(flag string, on bool) string {
 	return flag + " removed"
 }
 
-func compareTeamJam(key, team string, i int, ta, tb *teamJam, num func(int, string) string, add func(*Change)) {
+func compareTeamJam(key, team string, i int, ta, tb *teamJam, num func(int, string) string, skip map[string]bool, add func(*Change)) {
 	for _, f := range []string{"lead", "lost", "call", "no pivot", "star pass", "NI", "NI after star pass"} {
 		if ta.flags[f] != tb.flags[f] {
 			add(&Change{Area: AreaScore, Kind: flagKind(f, tb.flags[f]), Where: key, Team: team})
@@ -476,15 +533,18 @@ func compareTeamJam(key, team string, i int, ta, tb *teamJam, num func(int, stri
 		}
 	}
 	for n, q := range tb.pos {
-		if _, ok := posA[n]; !ok {
+		if _, ok := posA[n]; !ok && !(q == "Blocker" && skip[UntrackedBlockers]) {
 			add(&Change{Area: AreaLineups, Kind: "skater added to lineup", Where: key, Team: team, Skater: n, To: q})
 		}
 	}
-	if ta.unfilled != tb.unfilled {
+	if ta.unfilled != tb.unfilled && !skip[UntrackedBlockers] {
 		add(&Change{Area: AreaLineups, Kind: "positions marked not fielded", Where: key, Team: team, From: strconv.Itoa(ta.unfilled), To: strconv.Itoa(tb.unfilled)})
 	}
 	// Box symbols, for skaters in both lineups (a skater added or removed
 	// is already one change).
+	if skip[UntrackedBox] {
+		return
+	}
 	for n := range posA {
 		if _, ok := tb.pos[n]; !ok {
 			continue

@@ -353,7 +353,8 @@ function gamePage() {
     </div>
     <p class="note center">${[G.tournament, G.date && dayName(G.date), G.gameNo && `game ${esc(G.gameNo)}`].filter(Boolean).map(esc).join(" · ")}
       · stats from ${from}${G.statsbook && G.scoreboard ? " (there's a scoreboard file too)" : ""}
-      ${G.compared ? G.changes.length ? ` · <button class="link" data-changes="${esc(G.id)}">${G.changes.length} ${G.changes.length === 1 ? "correction" : "corrections"}</button> in the statsbook` : " · no corrections in the statsbook" : ""}</p>`;
+      ${G.compared ? G.changes.length ? ` · <button class="link" data-changes="${esc(G.id)}">${G.changes.length} ${G.changes.length === 1 ? "correction" : "corrections"}</button> in the statsbook` : " · no corrections in the statsbook" : ""}</p>
+    ${G.compared && G.untracked.length ? `<p class="note center small">${esc(untrackedNote(G.untracked))}</p>` : ""}`;
   const periods = Math.max(A.periodPoints.length, B.periodPoints.length);
   const lead = (t) => `${t.leadJams} <small>(${Math.round(pct(t.leadJams, t.jams))}%)</small>`;
   const sp = (t) => t.jammers.reduce((n, j) => n + j.starPasses, 0);
@@ -631,15 +632,26 @@ function fixesTab() {
     <div id="gameChanges">${games.map((g) => `<details class="changes" data-game="${g.id}"><summary>${esc(g.label)} <span class="muted">· ${g.changes} ${g.changes === 1 ? "correction" : "corrections"}</span></summary><div class="body muted small">Loading…</div></details>`).join("")}</div>`;
 }
 
+// untrackedNote says what the scoreboard file didn't have, so wasn't
+// compared (no lineup or penalty trackers on laptops).
+function untrackedNote(untracked) {
+  if (!untracked || !untracked.length) return "";
+  const names = { blockers: "blockers", penalties: "penalties", box: "box trips" };
+  const list = untracked.map((u) => names[u] || u);
+  const text = list.length > 1 ? list.slice(0, -1).join(", ") + " and " + list[list.length - 1] : list[0];
+  return `The scoreboard file has no ${text} (not tracked on the scoreboard), so those aren't compared.`;
+}
+
 async function showChanges(det) {
   const body = det.querySelector(".body");
   if (det.dataset.loaded) return;
   det.dataset.loaded = "1";
   try {
     const g = await getJSON(api("/games/" + det.dataset.game));
-    if (!g.changes.length) { body.textContent = "Scoreboard file and statsbook agree."; return; }
+    const skipped = untrackedNote(g.untracked);
+    if (!g.changes.length) { body.textContent = "Scoreboard file and statsbook agree." + (skipped ? " " + skipped : ""); return; }
     body.className = "body";
-    body.innerHTML = `<div class="scroll"><table class="t"><thead><tr><th class="l">Where</th><th class="l">Team</th><th class="l">Area</th><th class="l">Change</th><th class="l">Skater</th><th class="l">Scoreboard</th><th class="l">Statsbook</th></tr></thead><tbody>
+    body.innerHTML = `${skipped ? `<p class="note">${esc(skipped)}</p>` : ""}<div class="scroll"><table class="t"><thead><tr><th class="l">Where</th><th class="l">Team</th><th class="l">Area</th><th class="l">Change</th><th class="l">Skater</th><th class="l">Scoreboard</th><th class="l">Statsbook</th></tr></thead><tbody>
       ${g.changes.map((c) => `<tr><td class="l">${esc(c.where || "")}</td><td class="l">${c.team ? "Team " + esc(c.team) : ""}</td><td class="l">${esc(c.area)}</td><td class="l">${esc(c.kind)}</td>
         <td class="l">${c.skater ? (c.skater.startsWith("T") ? esc(c.skater) : "#" + esc(c.skater)) : ""}</td><td class="l">${esc(c.from || "")}</td><td class="l">${esc(c.to || "")}</td></tr>`).join("")}</tbody></table></div>`;
   } catch (e) {

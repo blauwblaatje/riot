@@ -119,7 +119,7 @@ func (ns *Namespace) Games() *Games {
 			g.Teams = e.Teams
 		}
 		if g.Scoreboard != nil && g.UsedStatsbook != nil {
-			g.Changes = analysis.Compare(g.Scoreboard, g.UsedStatsbook.Summary)
+			g.Changes, g.Untracked = analysis.Compare(g.Scoreboard, g.UsedStatsbook.Summary)
 			g.Compared = true
 		}
 		g.Score = derive.Scores(g.Stats)
