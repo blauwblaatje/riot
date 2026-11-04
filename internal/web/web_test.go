@@ -198,8 +198,11 @@ func TestUploadAndStats(t *testing.T) {
 	if c := st["coverage"].(map[string]any); c["games"].(float64) != 1 || c["scoreboard"].(float64) != 0 {
 		t.Errorf("Elsewhere coverage %v", c)
 	}
-	if tm := st["timing"].(map[string]any); tm["games"].(float64) != 0 {
-		t.Errorf("a statsbook-only selection has times: %v", tm["games"])
+	// a statsbook only has jam lengths (its Game Clock sheet)
+	if tm := st["timing"].(map[string]any); tm["games"].(float64) != 1 || tm["statsbooks"].(float64) != 1 ||
+		tm["jamLength"].(map[string]any)["n"].(float64) == 0 || tm["leadAt"].(map[string]any)["n"].(float64) != 0 {
+		t.Errorf("a statsbook-only selection: timing %v games, %v statsbooks, jam lengths %v, lead times %v",
+			tm["games"], tm["statsbooks"], tm["jamLength"].(map[string]any)["n"], tm["leadAt"].(map[string]any)["n"])
 	}
 
 	// Delete it.

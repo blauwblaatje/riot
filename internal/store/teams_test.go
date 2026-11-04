@@ -10,6 +10,8 @@ import (
 
 	"crgformat/replay"
 	"crgformat/stats"
+
+	"riot/internal/analysis"
 )
 
 func TestTeamID(t *testing.T) {
@@ -156,5 +158,48 @@ func TestRotterdamSeasons(t *testing.T) {
 	}
 	if _, _, err := ns2.Seasons("nobody|", SeasonClub); err != ErrNotFound {
 		t.Errorf("unknown team: %v", err)
+	}
+}
+
+// TestStatsbookTiming: statsbooks without game files give jam lengths from
+// their Game Clock sheet, and nothing that needs the scoreboard's times.
+func TestStatsbookTiming(t *testing.T) {
+	files, _ := filepath.Glob("../../../statsbooks/rotterdam/*.xlsx")
+	if len(files) == 0 {
+		t.Skip("no ../../../statsbooks/rotterdam")
+	}
+	s, err := Open(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	ns, err := s.Create("Rotterdam")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range files {
+		data, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := ns.Add(filepath.Base(f), data, "", time.Now()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var all []*analysis.Game
+	for _, g := range ns.Games().List {
+		if g.Stats != nil {
+			all = append(all, &g.Game)
+		}
+	}
+	tm := analysis.ComputeTiming(all, stats.ComputeTournament("all", Summaries(all)))
+	t.Logf("%d of %d games with times, jams %d, jam mean %.0f ms, call-offs %d", tm.Games, len(all), tm.Jams, tm.JamLength.Mean, tm.CallAt.N)
+	if tm.Games == 0 || tm.Statsbooks != tm.Games || tm.JamLength.N == 0 || tm.CallAt.N == 0 {
+		t.Errorf("statsbooks with a Game Clock sheet give jam lengths and call-offs: %+v", tm)
+	}
+	if tm.JamLength.Max > 120000 || tm.JamLength.Mean < 20000 {
+		t.Errorf("jam lengths: mean %.0f max %d ms", tm.JamLength.Mean, tm.JamLength.Max)
+	}
+	if tm.LeadAt.N != 0 || tm.PenaltyAt.N != 0 || tm.Lineup.N != 0 || tm.Timeouts["team"].Count != 0 {
+		t.Errorf("a statsbook has no lead times, penalty times, lineups or timeouts: %+v", tm)
 	}
 }

@@ -7,14 +7,20 @@ import (
 	"time"
 
 	"crgformat/derive"
+	"crgformat/replay"
 	"crgformat/stats"
 )
 
-// Timing is what only the scoreboard's game files can tell: a statsbook has
-// no times. Over the games that have a scoreboard file with a jam played.
+// Timing is the games' times. The scoreboard's game files have them all; a
+// statsbook only has jam lengths, in whole seconds, on its Game Clock sheet
+// (the same seconds as the game file's). Games is the games with a
+// scoreboard file, or else a statsbook with that sheet filled in; Statsbooks
+// is how many of them have only the statsbook, which count for the jam
+// lengths, how jams ended and the call-offs, not the rest.
 type Timing struct {
-	Games int `json:"games"`
-	Jams  int `json:"jams"`
+	Games      int `json:"games"`
+	Statsbooks int `json:"statsbooks"`
+	Jams       int `json:"jams"`
 	// Jam length (ms), how jams ended, and how many ran the full time.
 	JamLength *Hist          `json:"jamLength"`
 	JamEnds   map[string]int `json:"jamEnds"` // calloff, time, injury, official, unknown
@@ -112,10 +118,14 @@ type GameTiming struct {
 	Lineup   int64  `json:"lineup"` // all timed lineups together, ms
 	Timeouts int    `json:"timeouts"`
 	Reviews  int    `json:"reviews"`
+	// Statsbook: only the statsbook's jam lengths; no wall times,
+	// lineups or timeouts.
+	Statsbook bool `json:"statsbook,omitempty"`
 }
 
-// ComputeTiming works out the times of the games with a scoreboard file. t
-// is the stats of the same games (for the team keys).
+// ComputeTiming works out the times of the games with a scoreboard file, and
+// the jam lengths of those with only a statsbook that has them. t is the
+// stats of the same games (for the team keys).
 func ComputeTiming(games []*Game, t *stats.Tourn) *Timing {
 	out := &Timing{JamLength: newHist(10000, 13), JamEnds: map[string]int{}, LeadAt: newHist(5000, 13),
 		CallAt: newHist(10000, 13), PenaltyAt: newHist(10000, 13), Lineup: newHist(5000, 13),
@@ -128,9 +138,12 @@ func ComputeTiming(games []*Game, t *stats.Tourn) *Timing {
 	teams := map[string]*TeamTiming{}
 	jammers := map[string]*JammerTiming{}
 	for _, g := range sortedGames(games) {
-		s := g.Scoreboard
+		s, fromStatsbook := g.Scoreboard, false
 		if s == nil {
-			continue
+			if !StatsbookTimed(g.Stats) {
+				continue
+			}
+			s, fromStatsbook = g.Stats, true
 		}
 		keys, ok := teamsOf[g.ID]
 		if !ok {
@@ -138,7 +151,37 @@ func ComputeTiming(games []*Game, t *stats.Tourn) *Timing {
 		}
 		out.Games++
 		dg := derive.New(s)
-		gt := &GameTiming{ID: g.ID, Label: g.Label}
+		gt := &GameTiming{ID: g.ID, Label: g.Label, Statsbook: fromStatsbook}
+		if fromStatsbook {
+			out.Statsbooks++
+			for _, p := range s.Periods {
+				for _, j := range p.Jams {
+					if len(j.Teams) < 2 {
+						continue
+					}
+					out.Jams++
+					gt.Jams++
+					out.JamEnds[cmp.Or(j.EndReason, "unknown")]++
+					if d := statsbookJamLength(j); d > 0 {
+						out.JamLength.add(d)
+						gt.JamTime += d
+						for i, tj := range j.Teams[:2] {
+							if tj.Lead && tj.Calloff {
+								out.CallAt.add(d)
+								if tm := teams[keys[i]]; tm != nil {
+									tm.Calls++
+									tm.CallTime += d
+								} else {
+									teams[keys[i]] = &TeamTiming{Team: keys[i], Calls: 1, CallTime: d}
+								}
+							}
+						}
+					}
+				}
+			}
+			out.PerGame = append(out.PerGame, gt)
+			continue
+		}
 		var first, last time.Time
 		for _, p := range s.Periods {
 			timeoutAfter := map[string]bool{}
@@ -258,6 +301,31 @@ func ComputeTiming(games []*Game, t *stats.Tourn) *Timing {
 		return x.Team < y.Team || x.Team == y.Team && x.Number < y.Number
 	})
 	return out
+}
+
+// StatsbookTimed: the statsbook has its Game Clock sheet filled in. Without
+// it every jam reads as 0 seconds; a sheet with every jam at 2:00 is taken
+// as not filled in either.
+func StatsbookTimed(s *replay.Summary) bool {
+	if s == nil {
+		return false
+	}
+	for _, p := range s.Periods {
+		for _, j := range p.Jams {
+			if d := statsbookJamLength(j); d > 0 && d != 120000 {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// statsbookJamLength is a statsbook jam's length in ms, 0 if it has none.
+func statsbookJamLength(j *replay.Jam) int64 {
+	if j.Duration == nil {
+		return 0
+	}
+	return *j.Duration
 }
 
 func parseTime(s string) time.Time {

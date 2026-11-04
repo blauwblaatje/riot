@@ -473,48 +473,58 @@ function teamTables(t, i, G) {
   </div>`;
 }
 
-// --- timing (scoreboard files only) ------------------------------------------------------
+// --- timing (scoreboard files; jam lengths also from statsbooks) ---------------------------
 
 function timingTab() {
   const m = S.timing;
   if (!m.games) {
-    return `<div class="callout">None of these games has a scoreboard file. Times only come from the CRG scoreboard's game files (.json):
-      a statsbook records no jam lengths, lead times or timeouts. Upload the game files on the Files tab to see them.</div>`;
+    return `<div class="callout">None of these games has times. They come from the CRG scoreboard's game files (.json), and jam lengths
+      also from a statsbook with its Game Clock sheet filled in. Upload the game files on the Files tab to see them.</div>`;
   }
+  const sbGames = m.games - m.statsbooks; // games with a scoreboard file: everything but the jam lengths comes from these
   const to = m.timeouts;
-  const toRow = (k, name) => to[k].count ? `<tr><td class="l">${name}</td><td>${to[k].count}</td><td>${f1(per(to[k].count, m.games))}</td><td>${to[k].timed ? clock(per(to[k].time, to[k].timed)) : ""}</td></tr>` : "";
+  const toRow = (k, name) => to[k].count ? `<tr><td class="l">${name}</td><td>${to[k].count}</td><td>${f1(per(to[k].count, sbGames))}</td><td>${to[k].timed ? clock(per(to[k].time, to[k].timed)) : ""}</td></tr>` : "";
+  const fromFiles = (html) => sbGames ? html : "";
   const durGames = m.perGame.filter((g) => g.duration > 0);
   const avgDur = per(durGames.reduce((n, g) => n + g.duration, 0), durGames.length);
   const leadMin = Math.max(3, Math.round(Math.max(0, ...m.jammers.map((j) => j.leads)) / 4));
   const endName = { calloff: "Called off", time: "Jam clock ran out", injury: "Injury", official: "Officials", unknown: "Not recorded" };
-  return `${m.games < S.coverage.games ? `<p class="callout">From the ${m.games} of ${S.coverage.games} games that have a scoreboard file; statsbooks record no times.</p>` : ""}
-    ${tiles([["Games with times", m.games], ["Average jam", clock(m.jamLength.mean)], ["Median time to lead", m.leadAt.n ? clock(m.leadAt.median) : "–"],
-      ["Average lineup", m.lineup.n ? secs(m.lineup.mean) : "–", "jam end to next jam start"], ["Game, first to last whistle", durGames.length ? hm(avgDur) : "–"]])}
+  const notes = [];
+  if (m.games < S.coverage.games) {
+    notes.push(`${S.coverage.games - m.games} of the ${S.coverage.games} games have no times: a statsbook without its Game Clock sheet filled in.`);
+  }
+  if (m.statsbooks) {
+    notes.push(`${m.statsbooks} games have only a statsbook: they count for the jam lengths, how jams ended and the call-offs.
+      ${sbGames ? `The rest is from the ${sbGames} games with a scoreboard file.` : "The rest needs the scoreboard's game files."}`);
+  }
+  return `${notes.length ? `<p class="callout">${notes.join(" ")}</p>` : ""}
+    ${tiles([["Games with times", m.games], ["Average jam", clock(m.jamLength.mean)], ...(sbGames ? [["Median time to lead", m.leadAt.n ? clock(m.leadAt.median) : "–"],
+      ["Average lineup", m.lineup.n ? secs(m.lineup.mean) : "–", "jam end to next jam start"], ["Game, first to last whistle", durGames.length ? hm(avgDur) : "–"]] : [])])}
     <div class="grid">
       ${section("Jam length", "how long jams lasted", hist(m.jamLength, "jams"))}
-      ${section("Time to lead", "jam clock when the lead jammer finished their initial trip", hist(m.leadAt, "lead jammers"))}
+      ${fromFiles(section("Time to lead", "jam clock when the lead jammer finished their initial trip", hist(m.leadAt, "lead jammers")))}
       ${section("When lead jammers call it off", "jam clock at the call-off", hist(m.callAt, "call-offs"))}
-      ${section("When penalties are called", "jam clock when the penalty was entered (entry follows the call by a few seconds)", hist(m.penaltyAt, "penalties"))}
-      ${section("Lineups", "from a jam's end to the next jam's start, without a timeout in between", hist(m.lineup, "lineups"))}
+      ${fromFiles(section("When penalties are called", "jam clock when the penalty was entered (entry follows the call by a few seconds)", hist(m.penaltyAt, "penalties")))}
+      ${fromFiles(section("Lineups", "from a jam's end to the next jam's start, without a timeout in between", hist(m.lineup, "lineups")))}
       ${section("How jams ended", "", bars(Object.entries(m.jamEnds).sort((a, b) => b[1] - a[1]).map(([r, n]) => ({ html: esc(endName[r] || r), value: n, text: `${n} <small>(${f1(pct(n, m.jams))}%)</small>` }))))}
-      ${section("Timeouts", "", `<table class="t"><thead><tr><th class="l">Kind</th><th>Count</th><th>Per game</th><th>Average length</th></tr></thead><tbody>
-        ${toRow("team", "Team timeouts")}${toRow("review", "Official reviews")}${toRow("official", "Official timeouts")}</tbody></table>`)}
-      ${section("Teams: time to lead", "average jam clock when the team's jammer got lead",
+      ${fromFiles(section("Timeouts", "", `<table class="t"><thead><tr><th class="l">Kind</th><th>Count</th><th>Per game</th><th>Average length</th></tr></thead><tbody>
+        ${toRow("team", "Team timeouts")}${toRow("review", "Official reviews")}${toRow("official", "Official timeouts")}</tbody></table>`))}
+      ${fromFiles(section("Teams: time to lead", "average jam clock when the team's jammer got lead",
         bars([...m.teams].filter((t) => t.leads).sort((a, b) => per(a.leadTime, a.leads) - per(b.leadTime, b.leads)).map((t) => ({ html: esc(teamName(t.team)),
-          value: per(t.leadTime, t.leads) / 1000, text: secs(per(t.leadTime, t.leads)), tip: `${t.leads} leads in ${t.jams} jams` }))))}
-      ${section("Quickest jammers to lead", `average time to lead; at least ${leadMin} leads`,
+          value: per(t.leadTime, t.leads) / 1000, text: secs(per(t.leadTime, t.leads)), tip: `${t.leads} leads in ${t.jams} jams` })))))}
+      ${fromFiles(section("Quickest jammers to lead", `average time to lead; at least ${leadMin} leads`,
         bars(m.jammers.filter((j) => j.leads >= leadMin).sort((a, b) => per(a.leadTime, a.leads) - per(b.leadTime, b.leads)).slice(0, 15).map((j) => ({
           html: `#${esc(j.number)} ${esc(j.name || "")} <small>(${esc(teamName(j.team))})</small>`, value: per(j.leadTime, j.leads) / 1000,
-          text: secs(per(j.leadTime, j.leads)), tip: `${j.leads} leads in ${j.jams} jams; quickest ${secs(j.fastest)}` })), { empty: "Nobody with that many leads." }))}
+          text: secs(per(j.leadTime, j.leads)), tip: `${j.leads} leads in ${j.jams} jams; quickest ${secs(j.fastest)}` })), { empty: "Nobody with that many leads." })))}
     </div>
     <h2>Per game</h2>${table("tg", timingGameColumns, m.perGame)}`;
 }
 
 const timingGameColumns = [
-  ["Game", (g) => g.label, (g) => esc(g.label), "l"], ["First to last whistle", (g) => g.duration, (g) => g.duration ? hm(g.duration) : ""],
+  ["Game", (g) => g.label, (g) => esc(g.label) + (g.statsbook ? ` <small title="jam lengths from the statsbook's Game Clock sheet">statsbook</small>` : ""), "l"], ["First to last whistle", (g) => g.duration, (g) => g.duration ? hm(g.duration) : ""],
   ["Jams", (g) => g.jams], ["Average jam", (g) => per(g.jamTime, g.jams), (g) => clock(per(g.jamTime, g.jams))],
   ["Average lineup", (g) => per(g.lineup, g.lineups), (g) => g.lineups ? secs(per(g.lineup, g.lineups)) : ""],
-  ["Timeouts", (g) => g.timeouts], ["Official reviews", (g) => g.reviews],
+  ["Timeouts", (g) => g.timeouts, (g) => g.statsbook ? "" : g.timeouts], ["Official reviews", (g) => g.reviews, (g) => g.statsbook ? "" : g.reviews],
 ];
 
 // --- crews -------------------------------------------------------------------------------
