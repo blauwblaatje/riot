@@ -75,7 +75,6 @@ func (s *Site) Handler() http.Handler {
 	mux.HandleFunc("PATCH /n/{id}/api", s.withNS(s.rename))
 	mux.HandleFunc("DELETE /n/{id}/api", s.withNS(s.deleteNS))
 	mux.HandleFunc("POST /n/{id}/api/files", s.withNS(s.upload))
-	mux.HandleFunc("GET /n/{id}/api/files/{fid}", s.withNS(s.download))
 	mux.HandleFunc("PATCH /n/{id}/api/files/{fid}", s.withNS(s.updateFile))
 	mux.HandleFunc("DELETE /n/{id}/api/files/{fid}", s.withNS(s.removeFile))
 	mux.HandleFunc("POST /n/{id}/api/files/{fid}/reread", s.withNS(s.rereadFile))
@@ -401,16 +400,6 @@ func (s *Site) upload(w http.ResponseWriter, r *http.Request, ns *store.Namespac
 		part.Close()
 	}
 	writeJSON(w, map[string]any{"results": results})
-}
-
-func (s *Site) download(w http.ResponseWriter, r *http.Request, ns *store.Namespace) {
-	path, name, err := ns.FilePath(r.PathValue("fid"))
-	if err != nil {
-		http.Error(w, "no such file", http.StatusNotFound)
-		return
-	}
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", strings.ReplaceAll(name, `"`, "")))
-	http.ServeFile(w, r, path)
 }
 
 func (s *Site) updateFile(w http.ResponseWriter, r *http.Request, ns *store.Namespace) {

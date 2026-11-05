@@ -683,7 +683,7 @@ function filesTab() {
         <span class="muted">${e.jams ? `${e.jams} jams` : esc((e.state || "not played").toLowerCase())}${e.tournament ? ` · ${esc(e.tournament)}` : ""}</span>
         ${e.error ? `<span class="error">${esc(e.error)}</span>` : ""}${(e.notes || []).map((n) => `<br><span class="muted">${esc(n)}</span>`).join("")}</li>`).join("")}</ul></details>`
       : f.entries.length ? `<span class="small">${played ? `${f.entries[0].jams} jams` : `<span class="muted">not played${f.kind === "statsbook" ? " (filled in before the game)" : ""}</span>`}</span>` : "";
-    return `<tr class="${f.ignored ? "muted" : ""}"><td class="l wrap"><a href="${api("/files/" + f.id)}">${esc(f.name)}</a>${f.error ? `<br><span class="error small">${esc(f.error)}</span>` : ""}</td>
+    return `<tr class="${f.ignored ? "muted" : ""}"><td class="l wrap">${esc(f.name)}${f.error ? `<br><span class="error small">${esc(f.error)}</span>` : ""}</td>
       <td class="l">${kindName[f.kind] || esc(f.kind)}</td>
       <td class="l"><input type="text" list="tlist" data-tour="${f.id}" value="${esc(f.tournament)}" placeholder="${esc(fromFile.join(", ") || "as the file says")}" aria-label="Tournament"></td>
       <td class="l wrap">${entries}</td>

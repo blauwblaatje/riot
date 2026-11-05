@@ -263,17 +263,6 @@ func (ns *Namespace) file(id string) *File {
 	return nil
 }
 
-// FilePath is where an uploaded file is kept, and its name.
-func (ns *Namespace) FilePath(id string) (path, name string, err error) {
-	ns.mu.Lock()
-	defer ns.mu.Unlock()
-	f := ns.file(id)
-	if f == nil {
-		return "", "", ErrNotFound
-	}
-	return filepath.Join(ns.dir, "files", f.ID+ext(f.Kind)), f.Name, nil
-}
-
 func ext(kind string) string {
 	if kind == KindStatsbook {
 		return ".xlsx"

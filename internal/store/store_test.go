@@ -117,10 +117,7 @@ func TestReread(t *testing.T) {
 	if f.Error == "" || len(ns.Games().List) != 0 {
 		t.Fatalf("an empty file: error %q, %d games", f.Error, len(ns.Games().List))
 	}
-	path, _, err := ns.FilePath(f.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
+	path := filepath.Join(ns.dir, "files", f.ID+ext(f.Kind))
 	if err := os.WriteFile(path, game, 0o644); err != nil {
 		t.Fatal(err)
 	}

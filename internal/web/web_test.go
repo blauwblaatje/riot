@@ -205,6 +205,11 @@ func TestUploadAndStats(t *testing.T) {
 			tm["games"], tm["statsbooks"], tm["jamLength"].(map[string]any)["n"], tm["leadAt"].(map[string]any)["n"])
 	}
 
+	// Uploaded files can't be fetched back.
+	if resp, _ := http.Get(srv.URL + ns + "/api/files/" + sbID); resp.StatusCode == 200 {
+		t.Errorf("uploaded file can be downloaded: %d", resp.StatusCode)
+	}
+
 	// Delete it.
 	req, _ = http.NewRequest("DELETE", srv.URL+ns+"/api/files/"+sbID, nil)
 	resp, _ = http.DefaultClient.Do(req)
